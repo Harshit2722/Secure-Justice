@@ -4,11 +4,21 @@ const express = require('express');
 const cors = require('cors');
 const { connectDB, disconnectDB } = require('./src/config/db');
 
+require("./src/models/User");
 const app = express();
+ 
+app.use(express.json());
+
+//Fir routes
+const firRoutes = require("./src/routes/firRoutes");
+
+app.use("/api/fir", firRoutes);
 
 // Middleware
 app.use(cors());
 app.use(express.json());
+
+
 
 // Connect to MongoDB
 connectDB();
