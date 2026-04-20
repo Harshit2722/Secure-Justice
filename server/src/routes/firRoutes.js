@@ -12,41 +12,34 @@ const {
   getFIRByNumber,
 } = require("../controllers/firController");
 
-// 🔒 TODO: import auth middleware after integration
-// const { protect, authorize } = require("../middleware/authMiddleware");
+const { authenticate, authorizeRoles } = require("../middleware/auth.middleware");
 
 // ==============================
 // FIR ROUTES
 // ==============================
 
 // Create FIR → logged-in citizen
-// TODO: add protect (use req.user.id instead of user_id from body)
-router.post("/", createFIR);
+router.post("/", authenticate, authorizeRoles("citizen"), createFIR);
 
 // Get all FIRs → police dashboard
-// TODO: restrict to 'police'
-router.get("/", getAllFIRs);
+router.get("/", authenticate, authorizeRoles("police","citizen"), getAllFIRs);
 
-// Get FIRs by user
-// TODO: replace :userId with req.user.id (citizen access only)
-router.get("/user/:userId", getFIRsByUser);
+// Get FIRs by user → citizen's own FIRs
+router.get("/my-firs", authenticate, authorizeRoles("citizen"), getFIRsByUser);
 
-// Get FIR by number (keep before /:id)
+// Get FIR by number (public? or authenticated?)
 router.get("/number/:firNumber", getFIRByNumber);
 
 // Get FIR by ID
-router.get("/:id", getFIRById);
+router.get("/:id", authenticate, getFIRById);
 
 // Update FIR → only owner (citizen) and only if Pending
-// TODO: add protect + ownership check
-router.patch("/:id", updateFIR);
+router.patch("/:id", authenticate, authorizeRoles("citizen"), updateFIR);
 
 // Update FIR status → police only
-// TODO: restrict to 'police'
-router.patch("/:id/status", updateFIRStatus);
+router.patch("/:id/status", authenticate, authorizeRoles("police"), updateFIRStatus);
 
 // Delete FIR → admin only
-// TODO: restrict to 'admin'
-router.delete("/:id", deleteFIR);
+router.delete("/:id", authenticate, authorizeRoles("admin"), deleteFIR);
 
 module.exports = router;

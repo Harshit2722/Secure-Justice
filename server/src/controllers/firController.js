@@ -3,17 +3,14 @@ const mongoose = require("mongoose");
 
 // ==============================
 // CREATE FIR
-// 🔒 TODO (Auth Integration):
-// Replace fallback with ONLY req.user.id after JWT middleware
-// Remove req.body.user_id completely
 // ==============================
 exports.createFIR = async (req, res) => {
   try {
     const { complaint_text, crime_type, location } = req.body;
 
-    const user_id = req.user?.id || req.body.user_id;
+    const citizen = req.user.id;
 
-    if (!user_id || !complaint_text || !crime_type || !location) {
+    if (!complaint_text || !crime_type || !location) {
       return res.status(400).json({
         success: false,
         message: "All fields are required",
@@ -22,7 +19,7 @@ exports.createFIR = async (req, res) => {
 
     // Prevent duplicate FIR
     const existingFIR = await FIR.findOne({
-      user_id,
+      citizen,
       complaint_text: {
         $regex: `^${complaint_text.trim()}$`,
         $options: "i",
@@ -52,11 +49,11 @@ exports.createFIR = async (req, res) => {
 
     const fir = await FIR.create({
       fir_number: firNumber,
-      user_id,
+      citizen,
       complaint_text,
       crime_type,
       location,
-      status_history: [{ status: "Pending" }],
+      status_history: [{ status: "pending" }],
     });
 
     return res.status(201).json({
@@ -81,7 +78,7 @@ exports.getFIRByNumber = async (req, res) => {
     const { firNumber } = req.params;
 
     const fir = await FIR.findOne({ fir_number: firNumber }).populate(
-      "user_id",
+      "citizen",
       "name email role"
     );
 
@@ -107,8 +104,7 @@ exports.getFIRByNumber = async (req, res) => {
 
 // ==============================
 // GET ALL FIRs
-// 🔒 TODO (Auth Integration):
-// Restrict access to 'police' role only
+// Role-based access: Citizens see only their FIRs, Police see all
 // ==============================
 exports.getAllFIRs = async (req, res) => {
   try {
@@ -116,6 +112,12 @@ exports.getAllFIRs = async (req, res) => {
       req.query;
 
     let filter = {};
+
+    // Role-based access control
+    if (req.user.role === "citizen") {
+      filter.citizen = req.user.id;
+    }
+    // Police can view all FIRs (no role-based filter)
 
     if (status) {
       filter.status = {
@@ -161,7 +163,7 @@ exports.getAllFIRs = async (req, res) => {
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(limit)
-      .populate("user_id", "name email");
+      .populate("citizen", "name email");
 
     const total = await FIR.countDocuments(filter);
 
@@ -183,22 +185,12 @@ exports.getAllFIRs = async (req, res) => {
 
 // ==============================
 // GET FIRs BY USER
-// 🔒 TODO (Auth Integration):
-// Replace this route with req.user.id
-// Citizens should only access their own FIRs
 // ==============================
 exports.getFIRsByUser = async (req, res) => {
   try {
-    const { userId } = req.params;
+    const citizen = req.user.id;
 
-    if (!mongoose.Types.ObjectId.isValid(userId)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid User ID",
-      });
-    }
-
-    const firs = await FIR.find({ user_id: userId });
+    const firs = await FIR.find({ citizen });
 
     return res.status(200).json({
       success: true,
@@ -229,7 +221,7 @@ exports.getFIRById = async (req, res) => {
     }
 
     const fir = await FIR.findById(id).populate(
-      "user_id",
+      "citizen",
       "name email role"
     );
 
@@ -255,9 +247,6 @@ exports.getFIRById = async (req, res) => {
 
 // ==============================
 // UPDATE FIR DETAILS
-// 🔒 TODO (Auth Integration):
-// Add ownership check → only FIR owner (citizen) can update
-// Compare fir.user_id with req.user.id
 // ==============================
 exports.updateFIR = async (req, res) => {
   try {
@@ -279,7 +268,7 @@ exports.updateFIR = async (req, res) => {
     }
 
     delete updates.status;
-    delete updates.user_id;
+    delete updates.citizen;
 
     const fir = await FIR.findById(id);
 
@@ -290,7 +279,14 @@ exports.updateFIR = async (req, res) => {
       });
     }
 
-    if (fir.status !== "Pending") {
+    if (fir.citizen.toString() !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        message: "You can only update your own FIRs",
+      });
+    }
+
+    if (fir.status !== "pending") {
       return res.status(400).json({
         success: false,
         message: "Cannot edit FIR after verification",
@@ -316,9 +312,6 @@ exports.updateFIR = async (req, res) => {
 
 // ==============================
 // UPDATE FIR STATUS
-// 🔒 TODO (Auth Integration):
-// Restrict to 'police' role
-// Add updated_by: req.user.id in status_history
 // ==============================
 exports.updateFIRStatus = async (req, res) => {
   try {
@@ -340,10 +333,10 @@ exports.updateFIRStatus = async (req, res) => {
     }
 
     const allowedStatuses = [
-      "Pending",
-      "Verified",
-      "Under Investigation",
-      "Closed",
+      "pending",
+      "verified",
+      "under_investigation",
+      "closed",
     ];
 
     if (!allowedStatuses.includes(status)) {
@@ -363,7 +356,7 @@ exports.updateFIRStatus = async (req, res) => {
     }
 
     fir.status = status;
-    fir.status_history.push({ status });
+    fir.status_history.push({ status, updated_by: req.user.id });
 
     await fir.save();
 
