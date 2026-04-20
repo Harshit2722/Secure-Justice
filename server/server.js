@@ -1,8 +1,10 @@
-require('dotenv').config();
+require("dotenv").config();
 
-const express = require('express');
-const cors = require('cors');
-const { connectDB, disconnectDB } = require('./src/config/db');
+const express = require("express");
+const cors = require("cors");
+const { connectDB, disconnectDB } = require("./src/config/db");
+const authRoutes = require("./src/routes/authRoutes");
+const errorHandler = require("./src/middleware/error.middleware");
 
 require("./src/models/User");
 const app = express();
@@ -24,20 +26,22 @@ app.use(express.json());
 connectDB();
 
 // Routes
-app.get('/', (req, res) => {
-    res.send('Welcome to the Secure Justice API');
+app.get("/", (req, res) => {
+  res.send("Welcome to the Secure Justice API");
 });
+app.use("/api/auth", authRoutes);
 
-// Start the server
+// Error handler
+app.use(errorHandler);
+
 const PORT = process.env.PORT || 5001;
 app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
+  console.log(`Server is running on port ${PORT}`);
 });
 
 // Handle graceful shutdown
-process.on('SIGINT', async () => {
-    console.log('Shutting down server...');
-    await disconnectDB();
-    process.exit(0);
+process.on("SIGINT", async () => {
+  console.log("Shutting down server...");
+  await disconnectDB();
+  process.exit(0);
 });
-
