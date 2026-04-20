@@ -10,10 +10,6 @@ export default function AuthLayout() {
             SecureJustice
           </Link>
           <div className="hidden md:flex items-center gap-8">
-            <a className="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors" href="#">How it Works</a>
-            <a className="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors" href="#">Community</a>
-            <a className="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors" href="#">Support</a>
-            <Link to="/login" className="silver-sheen text-on-primary px-6 py-2 rounded-lg font-bold transition-all hover:opacity-90 active:scale-95">Sign In</Link>
           </div>
         </div>
       </nav>
