@@ -1,67 +1,34 @@
-const mongoose = require("mongoose");
+const mongoose = require('mongoose');
 
-const firSchema = new mongoose.Schema(
-  {
-    user_id: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
+const firSchema = new mongoose.Schema({
+    citizen: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: true
     },
-
-    fir_number: {
-      type: String,
-      unique: true,
-    },
-
     complaint_text: {
-      type: String,
-      required: true,
-      trim: true,
+        type: String,
+        required: true
     },
-
     crime_type: {
-      type: String,
-      enum: ["Theft", "Cybercrime", "Fraud", "Violence", "Other"],
-      required: true,
+        type: String,
+        enum: ['theft', 'cybercrime', 'fraud', 'violence', 'other'],
+        required: true
     },
-
     location: {
-      type: String,
-      required: true,
-      trim: true,
+        type: String,
+        required: true
     },
-
-    // Current status
     status: {
-      type: String,
-      enum: ["Pending", "Verified", "Under Investigation", "Closed"],
-      default: "Pending",
+        type: String,
+        enum: ['pending', 'verified', 'investigating', 'closed'],
+        default: 'pending'
     },
-    
+    assigned_officer: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        default: null
+    }
+}, { timestamps: true });
 
-    // Status history (audit trail)
-    status_history: [
-      {
-        status: {
-          type: String,
-          enum: ["Pending", "Verified", "Under Investigation", "Closed"],
-        },
-        updated_at: {
-          type: Date,
-          default: Date.now,
-        },
-        // TODO: Add updated_by (user reference) after auth integration
-      },
-    ],
-  },
-  {
-    timestamps: true,
-  }
-);
-
-// 🔥 Indexes for performance
-firSchema.index({ user_id: 1 });
-firSchema.index({ status: 1 });
-firSchema.index({ crime_type: 1 });
-
-module.exports = mongoose.model("FIR", firSchema);
+module.exports = mongoose.model('FIR', firSchema);
