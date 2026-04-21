@@ -4,6 +4,7 @@ const express = require("express");
 const cors = require("cors");
 const { connectDB, disconnectDB } = require("./src/config/db");
 const authRoutes = require("./src/routes/authRoutes");
+const evidenceRoutes = require("./src/routes/evidenceRoutes");
 const errorHandler = require("./src/middleware/error.middleware");
 
 const app = express();
@@ -20,6 +21,7 @@ app.get("/", (req, res) => {
   res.send("Welcome to the Secure Justice API");
 });
 app.use("/api/auth", authRoutes);
+app.use("/api", evidenceRoutes);
 
 // Error handler
 app.use(errorHandler);
