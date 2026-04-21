@@ -5,13 +5,21 @@ const cors = require("cors");
 const { connectDB, disconnectDB } = require("./src/config/db");
 const authRoutes = require("./src/routes/authRoutes");
 const evidenceRoutes = require("./src/routes/evidenceRoutes");
+const userRoutes = require("./src/routes/userRoutes");
+// Fir routes
+const firRoutes = require("./src/routes/firRoutes");
 const errorHandler = require("./src/middleware/error.middleware");
 
+
 const app = express();
+ 
+app.use(express.json());
+
 
 // Middleware
 app.use(cors());
 app.use(express.json());
+
 
 // Connect to MongoDB
 connectDB();
@@ -20,6 +28,9 @@ connectDB();
 app.get("/", (req, res) => {
   res.send("Welcome to the Secure Justice API");
 });
+
+app.use("/api/fir", firRoutes);
+app.use("/api/user", userRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api", evidenceRoutes);
 
