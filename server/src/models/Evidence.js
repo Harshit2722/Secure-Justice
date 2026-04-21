@@ -19,6 +19,11 @@ const evidenceSchema = new mongoose.Schema({
         ref: 'User',
         required: true
     },
+    analyzed_by: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        default: null
+    },
     file_type: {
         type: String,
         enum: ['image', 'video', 'document'],
@@ -27,6 +32,19 @@ const evidenceSchema = new mongoose.Schema({
     description: {
         type: String,
         default: ''
+    },
+    status: {
+        type: String,
+        enum: ['Pending', 'Verified', 'Tampered'],
+        default: 'Pending'
+    },
+    cloudinary_report_url: {
+        type: String,
+        default: null
+    },
+    forensic_report_url: {
+        type: String,
+        default: null
     }
 }, { timestamps: true });
 
