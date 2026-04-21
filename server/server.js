@@ -4,13 +4,25 @@ const express = require("express");
 const cors = require("cors");
 const { connectDB, disconnectDB } = require("./src/config/db");
 const authRoutes = require("./src/routes/authRoutes");
+const userRoutes = require("./src/routes/userRoutes");
 const errorHandler = require("./src/middleware/error.middleware");
 
+require("./src/models/User");
 const app = express();
+ 
+app.use(express.json());
+
+// Fir routes
+const firRoutes = require("./src/routes/firRoutes");
+
+app.use("/api/fir", firRoutes);
+app.use("/api/user", userRoutes);
 
 // Middleware
 app.use(cors());
 app.use(express.json());
+
+
 
 // Connect to MongoDB
 connectDB();

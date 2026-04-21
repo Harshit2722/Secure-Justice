@@ -3,16 +3,20 @@ import { useEffect, useState } from 'react';
 
 export default function PortalLayout() {
   const [user, setUser] = useState(null);
+  const [showNotifications, setShowNotifications] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
   useEffect(() => {
-    const userData = localStorage.getItem('user');
+    let userData = localStorage.getItem('user');
     if (!userData) {
-      navigate('/login');
-    } else {
-      setUser(JSON.parse(userData));
+      // Mock user for UI testing
+      const mockUser = { name: 'Test User', role: 'citizen', cases: [] };
+      localStorage.setItem('user', JSON.stringify(mockUser));
+      localStorage.setItem('token', 'fake-token');
+      userData = JSON.stringify(mockUser);
     }
+    setUser(JSON.parse(userData));
   }, [navigate]);
 
   const handleLogout = () => {
@@ -28,6 +32,12 @@ export default function PortalLayout() {
     { name: 'My Cases', path: '/cases', icon: 'gavel' },
     { name: 'Documents', path: '/documents', icon: 'folder' },
     { name: 'Settings', path: '/settings', icon: 'settings' }
+  ];
+
+  const notifications = [
+    { id: 1, title: 'Case Updated', message: 'Your case FIR-2026-105 status changed to Verified.', time: '2 mins ago', unread: true },
+    { id: 2, title: 'New Document Required', message: 'Please upload your ID proof for case FIR-2026-142.', time: '1 hour ago', unread: true },
+    { id: 3, title: 'Profile Complete', message: 'Your profile has been successfully updated.', time: '1 day ago', unread: false },
   ];
 
   return (
@@ -81,11 +91,38 @@ export default function PortalLayout() {
         {/* Top Header */}
         <header className="h-20 bg-surface/80 backdrop-blur-md border-b border-outline-variant/10 flex items-center justify-between px-8 z-10 sticky top-0">
           <h2 className="text-2xl font-bold tracking-tight capitalize">{user.role} Portal</h2>
-          <div className="flex items-center gap-5">
-            <button className="relative p-2 text-on-surface-variant hover:text-primary transition-colors">
+          <div className="flex items-center gap-5 relative">
+            <button 
+              onClick={() => setShowNotifications(!showNotifications)}
+              className="relative p-2 text-on-surface-variant hover:text-primary hover:bg-surface-container rounded-full transition-colors flex items-center justify-center"
+            >
               <span className="material-symbols-outlined">notifications</span>
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-error"></span>
+              <span className="absolute top-1 right-1 w-2.5 h-2.5 rounded-full bg-error border-2 border-surface"></span>
             </button>
+
+            {/* Notifications Dropdown */}
+            {showNotifications && (
+              <div className="absolute right-0 top-14 w-80 bg-surface-container-lowest border border-outline-variant/20 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2">
+                <div className="p-4 border-b border-outline-variant/10 flex justify-between items-center bg-surface-container-low/50">
+                  <h3 className="font-bold text-on-surface">Notifications</h3>
+                  <button className="text-xs text-primary font-bold hover:underline">Mark all read</button>
+                </div>
+                <div className="max-h-80 overflow-y-auto">
+                  {notifications.map(notification => (
+                    <div key={notification.id} className={`p-4 border-b border-outline-variant/10 hover:bg-surface-container/50 transition-colors cursor-pointer ${notification.unread ? 'bg-primary/5' : ''}`}>
+                      <div className="flex justify-between items-start mb-1">
+                        <h4 className={`text-sm ${notification.unread ? 'font-bold text-on-surface' : 'font-medium text-on-surface-variant'}`}>{notification.title}</h4>
+                        <span className="text-[10px] text-on-surface-variant/70 font-medium whitespace-nowrap ml-2">{notification.time}</span>
+                      </div>
+                      <p className="text-xs text-on-surface-variant line-clamp-2 leading-relaxed">{notification.message}</p>
+                    </div>
+                  ))}
+                </div>
+                <div className="p-3 text-center border-t border-outline-variant/10 bg-surface-container-lowest hover:bg-surface-container transition-colors">
+                  <button className="text-sm text-primary font-bold">View All</button>
+                </div>
+              </div>
+            )}
           </div>
         </header>
 

@@ -5,6 +5,8 @@ import Register from './components/auth/Register'
 import Landing from './pages/Landing'
 import PortalLayout from './components/layout/PortalLayout'
 import DashboardRouter from './pages/DashboardRouter'
+import MyCases from './pages/MyCases'
+import Settings from './pages/Settings'
 
 function App() {
   return (
@@ -22,9 +24,9 @@ function App() {
       <Route element={<PortalLayout />}>
         <Route path="/dashboard" element={<DashboardRouter />} />
         {/* Placeholder for other navigation items */}
-        <Route path="/cases" element={<DashboardRouter />} />
+        <Route path="/cases" element={<MyCases />} />
         <Route path="/documents" element={<DashboardRouter />} />
-        <Route path="/settings" element={<DashboardRouter />} />
+        <Route path="/settings" element={<Settings />} />
       </Route>
     </Routes>
   )
