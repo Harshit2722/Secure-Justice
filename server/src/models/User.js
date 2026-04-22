@@ -18,6 +18,28 @@ const userSchema = new mongoose.Schema({
         type: String,
         enum: ['citizen', 'police', 'forensic', 'lawyer', 'victim', 'court', 'admin'],
         required: true
+    },
+    isVerified: {
+        type: Boolean,
+        default: false
+    },
+    verificationToken: {
+        type: String
+    },
+    verificationTokenExpiry: {
+        type: Date
+    },
+    otp: {
+        type: String
+    },
+    otpExpiry: {
+        type: Date
+    },
+    resetPasswordToken: {
+        type: String
+    },
+    resetPasswordExpiry: {
+        type: Date
     }
 }, { timestamps: true });
 

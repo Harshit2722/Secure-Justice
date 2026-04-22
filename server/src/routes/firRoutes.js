@@ -10,6 +10,8 @@ const {
   updateFIR,
   deleteFIR,
   getFIRByNumber,
+  assignOfficer,
+  updateFIRStatusWithNotification,
 } = require("../controllers/firController");
 
 const { authenticate, authorizeRoles } = require("../middleware/auth.middleware");
@@ -38,6 +40,12 @@ router.patch("/:id", authenticate, authorizeRoles("citizen"), updateFIR);
 
 // Update FIR status → police only
 router.patch("/:id/status", authenticate, authorizeRoles("police"), updateFIRStatus);
+
+// Update FIR status with notifications → police only
+router.patch("/:id/status-update", authenticate, authorizeRoles("police"), updateFIRStatusWithNotification);
+
+// Assign officer to FIR → police/admin only
+router.patch("/:id/assign-officer", authenticate, authorizeRoles("police", "admin"), assignOfficer);
 
 // Delete FIR → admin only
 router.delete("/:id", authenticate, authorizeRoles("admin"), deleteFIR);

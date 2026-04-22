@@ -3,6 +3,10 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const asyncHandler = require("../utils/asyncHandler");
 const ApiError = require("../utils/apiError");
+const { sendEmail } = require("../utils/emailService");
+const { generateVerificationToken, generateOTP } = require("../utils/tokenUtils");
+const { validateEmail, validatePassword, validateName } = require("../utils/validationUtils");
+const emailTemplates = require("../utils/emailTemplates");
 
 /**
  * @desc    Register a new user
@@ -20,31 +24,59 @@ const register = asyncHandler(async (req, res) => {
     );
   }
 
-  // 2. Check if the user already exists to prevent duplicate emails
+  // 2. Validate name
+  const nameValidation = validateName(name);
+  if (!nameValidation.valid) {
+    throw new ApiError(400, nameValidation.message);
+  }
+
+  // 3. Validate email format
+  if (!validateEmail(email)) {
+    throw new ApiError(400, "Please provide a valid email address.");
+  }
+
+  // 4. Validate password strength
+  const passwordValidation = validatePassword(password);
+  if (!passwordValidation.valid) {
+    throw new ApiError(400, passwordValidation.message);
+  }
+
+  // 5. Check if the user already exists to prevent duplicate emails
   const existingUser = await User.findOne({ email });
   if (existingUser) {
     throw new ApiError(400, "User with this email already exists.");
   }
 
-  // 3. Hash the password
+  // 6. Hash the password
   const saltRounds = 10;
   const salt = await bcrypt.genSalt(saltRounds);
   const hashedPassword = await bcrypt.hash(password, salt);
 
-  // 4. Create and save the new user
+  // 7. Generate verification token
+  const verificationToken = generateVerificationToken();
+  const verificationTokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
+  // 8. Create and save the new user
   const newUser = new User({
     name,
     email,
     password: hashedPassword,
     role,
+    verificationToken,
+    verificationTokenExpiry,
   });
 
   await newUser.save();
 
-  // 5. Return success response (never return the password, even hashed)
+  // 9. Send verification email
+  const verificationLink = `${process.env.FRONTEND_URL}/verify-email?token=${verificationToken}`;
+  const html = emailTemplates.verificationEmail(newUser.name, verificationLink);
+  await sendEmail(email, 'Verify Your Email - Secure Justice', html);
+
+  // 10. Return success response
   res.status(201).json({
     success: true,
-    message: "User registered successfully.",
+    message: "User registered successfully. Please check your email to verify your account.",
     data: {
       id: newUser._id,
       name: newUser.name,
@@ -55,7 +87,7 @@ const register = asyncHandler(async (req, res) => {
 });
 
 /**
- * @desc    Authenticate user & get token
+ * @desc    Authenticate user & send OTP
  * @route   POST /api/auth/login
  * @access  Public
  */
@@ -67,29 +99,116 @@ const login = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Please provide email and password.");
   }
 
-  // 2. Find the user by email
+  // 2. Validate email format
+  if (!validateEmail(email)) {
+    throw new ApiError(400, "Please provide a valid email address.");
+  }
+
+  // 3. Find the user by email
   const user = await User.findOne({ email });
   if (!user) {
     throw new ApiError(401, "Invalid credentials.");
   }
 
-  // 3. Compare the provided password with the hashed password in the database
+  // 4. Check if user is verified
+  if (!user.isVerified) {
+    throw new ApiError(401, "Please verify your email before logging in.");
+  }
+
+  // 5. Compare the provided password with the hashed password in the database
   const isMatch = await bcrypt.compare(password, user.password);
   if (!isMatch) {
     throw new ApiError(401, "Invalid credentials.");
   }
 
-  // 4. Generate the JWT
-  // Payload includes user ID and Role as requested
+  // 6. Generate OTP
+  const otp = generateOTP();
+  const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+  // 7. Save OTP to user
+  user.otp = otp;
+  user.otpExpiry = otpExpiry;
+  await user.save();
+
+  // 8. Send OTP email
+  const html = emailTemplates.otpEmail(user.name, otp);
+  await sendEmail(email, 'Your Login OTP - Secure Justice', html);
+
+  // 9. Send response
+  res.status(200).json({
+    success: true,
+    message: "OTP sent to your email. Please verify to complete login.",
+    data: {
+      email: user.email,
+    },
+  });
+});
+
+/**
+ * @desc    Verify email
+ * @route   POST /api/auth/verify-email
+ * @access  Public
+ */
+const verifyEmail = asyncHandler(async (req, res) => {
+  const { token } = req.body;
+
+  if (!token) {
+    throw new ApiError(400, "Verification token is required.");
+  }
+
+  const user = await User.findOne({
+    verificationToken: token,
+    verificationTokenExpiry: { $gt: new Date() }
+  });
+
+  if (!user) {
+    throw new ApiError(400, "Invalid or expired verification token.");
+  }
+
+  user.isVerified = true;
+  user.verificationToken = undefined;
+  user.verificationTokenExpiry = undefined;
+  await user.save();
+
+  res.status(200).json({
+    success: true,
+    message: "Email verified successfully. You can now log in.",
+  });
+});
+
+/**
+ * @desc    Verify OTP and login
+ * @route   POST /api/auth/verify-otp
+ * @access  Public
+ */
+const verifyOTP = asyncHandler(async (req, res) => {
+  const { email, otp } = req.body;
+
+  if (!email || !otp) {
+    throw new ApiError(400, "Email and OTP are required.");
+  }
+
+  const user = await User.findOne({ email });
+  if (!user) {
+    throw new ApiError(401, "User not found.");
+  }
+
+  if (!user.otp || user.otp !== otp || user.otpExpiry < new Date()) {
+    throw new ApiError(401, "Invalid or expired OTP.");
+  }
+
+  // Clear OTP
+  user.otp = undefined;
+  user.otpExpiry = undefined;
+  await user.save();
+
+  // Generate JWT
   const payload = {
     id: user._id,
     role: user.role,
   };
-
-  // Sign the token using a secret key from environment variables
   const token = jwt.sign(payload, process.env.JWT_SECRET);
 
-  // 5. Send response with token
   res.status(200).json({
     success: true,
     message: "Logged in successfully.",
@@ -103,7 +222,113 @@ const login = asyncHandler(async (req, res) => {
   });
 });
 
+/**
+ * @desc    Resend OTP
+ * @route   POST /api/auth/resend-otp
+ * @access  Public
+ */
+const resendOTP = asyncHandler(async (req, res) => {
+  const { email } = req.body;
+
+  if (!email) {
+    throw new ApiError(400, "Email is required.");
+  }
+
+  const user = await User.findOne({ email });
+  if (!user) {
+    throw new ApiError(404, "User not found.");
+  }
+
+  if (!user.isVerified) {
+    throw new ApiError(400, "Please verify your email first.");
+  }
+
+  // Generate new OTP
+  const otp = generateOTP();
+  const otpExpiry = new Date(Date.now() + 10 * 60 * 1000);
+
+  user.otp = otp;
+  user.otpExpiry = otpExpiry;
+  await user.save();
+
+  const html = emailTemplates.otpEmail(user.name, otp);
+  await sendEmail(email, 'Your Login OTP - Secure Justice', html);
+
+  res.status(200).json({
+    success: true,
+    message: "OTP resent to your email.",
+  });
+});
+const forgotPassword = asyncHandler(async (req, res) => {
+  const { email } = req.body;
+
+  if (!email) {
+    throw new ApiError(400, "Email is required.");
+  }
+
+  const user = await User.findOne({ email });
+  if (!user) {
+    throw new ApiError(404, "User not found.");
+  }
+
+  const resetToken = generateVerificationToken();
+  const resetTokenExpiry = new Date(Date.now() + 1 * 60 * 60 * 1000); // 1 hour
+
+  user.resetPasswordToken = resetToken;
+  user.resetPasswordExpiry = resetTokenExpiry;
+  await user.save();
+
+  const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
+  const html = emailTemplates.passwordResetEmail(user.name, resetLink);
+  await sendEmail(email, 'Reset Your Password - Secure Justice', html);
+
+  res.status(200).json({
+    success: true,
+    message: "Password reset link sent to your email.",
+  });
+});
+
+/**
+ * @desc    Reset Password
+ * @route   POST /api/auth/reset-password
+ * @access  Public
+ */
+const resetPassword = asyncHandler(async (req, res) => {
+  const { token, newPassword } = req.body;
+
+  if (!token || !newPassword) {
+    throw new ApiError(400, "Token and new password are required.");
+  }
+
+  const user = await User.findOne({
+    resetPasswordToken: token,
+    resetPasswordExpiry: { $gt: new Date() }
+  });
+
+  if (!user) {
+    throw new ApiError(400, "Invalid or expired reset token.");
+  }
+
+  const saltRounds = 10;
+  const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
+
+  user.password = hashedPassword;
+  user.resetPasswordToken = undefined;
+  user.resetPasswordExpiry = undefined;
+  await user.save();
+
+  res.status(200).json({
+    success: true,
+    message: "Password reset successfully.",
+  });
+});
+
 module.exports = {
   register,
   login,
+  verifyEmail,
+  verifyOTP,
+  resendOTP,
+  forgotPassword,
+  resetPassword,
 };
