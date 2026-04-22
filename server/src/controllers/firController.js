@@ -184,6 +184,35 @@ exports.getAllFIRs = async (req, res) => {
 };
 
 // ==============================
+// GET POLICE STATS
+// ==============================
+exports.getPoliceStats = async (req, res) => {
+  try {
+    const statusStats = await FIR.aggregate([
+      { $group: { _id: "$status", count: { $sum: 1 } } }
+    ]);
+
+    const crimeTypeStats = await FIR.aggregate([
+      { $group: { _id: "$crime_type", count: { $sum: 1 } } }
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        statusStats,
+        crimeTypeStats
+      }
+    });
+  } catch (error) {
+    console.error("Get Police Stats Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server Error",
+    });
+  }
+};
+
+// ==============================
 // GET FIRs BY USER
 // ==============================
 exports.getFIRsByUser = async (req, res) => {

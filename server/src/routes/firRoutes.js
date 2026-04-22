@@ -10,6 +10,7 @@ const {
   updateFIR,
   deleteFIR,
   getFIRByNumber,
+  getPoliceStats,
 } = require("../controllers/firController");
 
 const { authenticate, authorizeRoles } = require("../middleware/auth.middleware");
@@ -17,6 +18,9 @@ const { authenticate, authorizeRoles } = require("../middleware/auth.middleware"
 // ==============================
 // FIR ROUTES
 // ==============================
+
+// Police Stats → dashboard
+router.get("/stats", authenticate, authorizeRoles("police"), getPoliceStats);
 
 // Create FIR → logged-in citizen
 router.post("/", authenticate, authorizeRoles("citizen"), createFIR);
