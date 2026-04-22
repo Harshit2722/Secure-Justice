@@ -16,8 +16,12 @@ const authenticate = asyncHandler(async (req, res, next) => {
 
   let decoded;
   try {
+    if (!process.env.JWT_SECRET) {
+      console.error("JWT_SECRET is missing in environment variables!");
+    }
     decoded = jwt.verify(token, process.env.JWT_SECRET);
   } catch (err) {
+    console.error("JWT Verification failed:", err.message);
     throw new ApiError(401, "Invalid or expired authentication token.");
   }
 
