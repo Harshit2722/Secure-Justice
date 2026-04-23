@@ -35,12 +35,13 @@ const userSchema = new mongoose.Schema({
     otpExpiry: {
         type: Date
     },
-    resetPasswordToken: {
+    resetOtp: {
         type: String
     },
-    resetPasswordExpiry: {
+    resetOtpExpiry: {
         type: Date
     }
-}, { timestamps: true });
-
+}, {
+    timestamps: true
+});
 module.exports = mongoose.model('User', userSchema);

@@ -5,7 +5,7 @@ const asyncHandler = require("../utils/asyncHandler");
 const ApiError = require("../utils/apiError");
 const { sendEmail } = require("../utils/emailService");
 const { generateVerificationToken, generateOTP } = require("../utils/tokenUtils");
-const { validateEmail, validatePassword, validateName } = require("../utils/validationUtils");
+const { validateName } = require("../utils/validationUtils");
 const emailTemplates = require("../utils/emailTemplates");
 
 /**
@@ -30,18 +30,7 @@ const register = asyncHandler(async (req, res) => {
     throw new ApiError(400, nameValidation.message);
   }
 
-  // 3. Validate email format
-  if (!validateEmail(email)) {
-    throw new ApiError(400, "Please provide a valid email address.");
-  }
-
-  // 4. Validate password strength
-  const passwordValidation = validatePassword(password);
-  if (!passwordValidation.valid) {
-    throw new ApiError(400, passwordValidation.message);
-  }
-
-  // 5. Check if the user already exists to prevent duplicate emails
+  // 3. Check if the user already exists to prevent duplicate emails
   const existingUser = await User.findOne({ email });
   if (existingUser) {
     throw new ApiError(400, "User with this email already exists.");
@@ -99,12 +88,7 @@ const login = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Please provide email and password.");
   }
 
-  // 2. Validate email format
-  if (!validateEmail(email)) {
-    throw new ApiError(400, "Please provide a valid email address.");
-  }
-
-  // 3. Find the user by email
+  // 2. Find the user by email
   const user = await User.findOne({ email });
   if (!user) {
     throw new ApiError(401, "Invalid credentials.");
@@ -271,50 +255,51 @@ const forgotPassword = asyncHandler(async (req, res) => {
     throw new ApiError(404, "User not found.");
   }
 
-  const resetToken = generateVerificationToken();
-  const resetTokenExpiry = new Date(Date.now() + 1 * 60 * 60 * 1000); // 1 hour
+  // Generate OTP
+  const otp = generateOTP();
+  const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
-  user.resetPasswordToken = resetToken;
-  user.resetPasswordExpiry = resetTokenExpiry;
+  user.resetOtp = otp;
+  user.resetOtpExpiry = otpExpiry;
   await user.save();
 
-  const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
-  const html = emailTemplates.passwordResetEmail(user.name, resetLink);
-  await sendEmail(email, 'Reset Your Password - Secure Justice', html);
+  const html = emailTemplates.passwordResetOtpEmail(user.name, otp);
+  await sendEmail(email, 'Password Reset OTP - Secure Justice', html);
 
   res.status(200).json({
     success: true,
-    message: "Password reset link sent to your email.",
+    message: "Password reset OTP sent to your email.",
   });
 });
 
 /**
- * @desc    Reset Password
+ * @desc    Reset Password with OTP
  * @route   POST /api/auth/reset-password
  * @access  Public
  */
 const resetPassword = asyncHandler(async (req, res) => {
-  const { token, newPassword } = req.body;
+  const { email, otp, newPassword } = req.body;
 
-  if (!token || !newPassword) {
-    throw new ApiError(400, "Token and new password are required.");
+  if (!email || !otp || !newPassword) {
+    throw new ApiError(400, "Email, OTP and new password are required.");
   }
 
   const user = await User.findOne({
-    resetPasswordToken: token,
-    resetPasswordExpiry: { $gt: new Date() }
+    email,
+    resetOtp: otp,
+    resetOtpExpiry: { $gt: new Date() }
   });
 
   if (!user) {
-    throw new ApiError(400, "Invalid or expired reset token.");
+    throw new ApiError(400, "Invalid or expired OTP.");
   }
 
   const saltRounds = 10;
   const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
 
   user.password = hashedPassword;
-  user.resetPasswordToken = undefined;
-  user.resetPasswordExpiry = undefined;
+  user.resetOtp = undefined;
+  user.resetOtpExpiry = undefined;
   await user.save();
 
   res.status(200).json({

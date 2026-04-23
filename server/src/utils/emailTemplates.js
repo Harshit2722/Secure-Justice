@@ -19,11 +19,11 @@ const emailTemplates = {
     <body>
       <div class="container">
         <div class="header">
-          <h1>Welcome to Secure Justice</h1>
+          <h1>Welcome to SecureJustice</h1>
         </div>
         <div class="content">
           <p>Hi ${name},</p>
-          <p>Thank you for registering with Secure Justice. To complete your registration, please verify your email address.</p>
+          <p>Thank you for registering with SecureJustice. To complete your registration, please verify your email address.</p>
           <p style="text-align: center;">
             <a href="${verificationLink}" class="button">Verify Email</a>
           </p>
@@ -31,7 +31,7 @@ const emailTemplates = {
           <p>If you didn't register, please ignore this email or contact support.</p>
         </div>
         <div class="footer">
-          <p>&copy; 2026 Secure Justice. All rights reserved.</p>
+          <p>&copy; 2026 SecureJustice. All rights reserved.</p>
         </div>
       </div>
     </body>
@@ -55,7 +55,7 @@ const emailTemplates = {
     <body>
       <div class="container">
         <div class="header">
-          <h1>Secure Justice Login</h1>
+          <h1>SecureJustice Login</h1>
         </div>
         <div class="content">
           <p>Hi ${name},</p>
@@ -67,14 +67,14 @@ const emailTemplates = {
           <p>If you didn't request this, please ignore or contact support immediately.</p>
         </div>
         <div class="footer">
-          <p>&copy; 2026 Secure Justice. All rights reserved.</p>
+          <p>&copy; 2026 SecureJustice. All rights reserved.</p>
         </div>
       </div>
     </body>
     </html>
   `,
 
-  passwordResetEmail: (name, resetLink) => `
+  passwordResetOtpEmail: (name, otp) => `
     <!DOCTYPE html>
     <html>
     <head>
@@ -83,26 +83,27 @@ const emailTemplates = {
         .container { max-width: 600px; margin: 0 auto; padding: 20px; }
         .header { background-color: #2c3e50; color: white; padding: 20px; text-align: center; }
         .content { padding: 20px; background-color: #f9f9f9; }
-        .button { display: inline-block; padding: 10px 20px; background-color: #e74c3c; color: white; text-decoration: none; border-radius: 5px; }
+        .otp-box { background-color: #e8f4f8; padding: 20px; text-align: center; border-radius: 5px; }
+        .otp-code { font-size: 32px; font-weight: bold; letter-spacing: 3px; color: #e74c3c; }
         .footer { text-align: center; padding: 10px; color: #999; font-size: 12px; }
       </style>
     </head>
     <body>
       <div class="container">
         <div class="header">
-          <h1>Password Reset Request</h1>
+          <h1>Password Reset - SecureJustice</h1>
         </div>
         <div class="content">
           <p>Hi ${name},</p>
-          <p>You requested to reset your password. Click the button below to proceed:</p>
-          <p style="text-align: center;">
-            <a href="${resetLink}" class="button">Reset Password</a>
-          </p>
-          <p><strong>Note:</strong> This link will expire in 1 hour.</p>
-          <p>If you didn't request this, please ignore this email or contact support.</p>
+          <p>Your password reset OTP is:</p>
+          <div class="otp-box">
+            <p class="otp-code">${otp}</p>
+          </div>
+          <p><strong>Important:</strong> This OTP will expire in 10 minutes.</p>
+          <p>If you didn't request this, please ignore or contact support immediately.</p>
         </div>
         <div class="footer">
-          <p>&copy; 2026 Secure Justice. All rights reserved.</p>
+          <p>&copy; 2026 SecureJustice. All rights reserved.</p>
         </div>
       </div>
     </body>
@@ -131,7 +132,7 @@ const emailTemplates = {
         </div>
         <div class="content">
           <p>Hi ${name},</p>
-          <p>Your FIR has been successfully registered with Secure Justice. Here are the details:</p>
+          <p>Your FIR has been successfully registered with SecureJustice. Here are the details:</p>
           <div class="details">
             <div class="detail-row">
               <span class="detail-label">FIR Number:</span> ${firNumber}
@@ -152,7 +153,7 @@ const emailTemplates = {
           <p>You will receive updates on your FIR status via email. An officer will be assigned soon.</p>
         </div>
         <div class="footer">
-          <p>&copy; 2026 Secure Justice. All rights reserved.</p>
+          <p>&copy; 2026 SecureJustice. All rights reserved.</p>
         </div>
       </div>
     </body>
@@ -199,7 +200,7 @@ const emailTemplates = {
           <p>Please contact the complainant and begin investigation as per protocol.</p>
         </div>
         <div class="footer">
-          <p>&copy; 2026 Secure Justice. All rights reserved.</p>
+          <p>&copy; 2026 SecureJustice. All rights reserved.</p>
         </div>
       </div>
     </body>
@@ -246,7 +247,7 @@ const emailTemplates = {
           <p>Thank you for your cooperation.</p>
         </div>
         <div class="footer">
-          <p>&copy; 2026 Secure Justice. All rights reserved.</p>
+          <p>&copy; 2026 SecureJustice. All rights reserved.</p>
         </div>
       </div>
     </body>

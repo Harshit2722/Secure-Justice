@@ -1,8 +1,6 @@
 const FIR = require("../models/FIR");
 const mongoose = require("mongoose");
-const { sendEmail } = require("../utils/emailService");
 const User = require("../models/User");
-const emailTemplates = require("../utils/emailTemplates");
 
 // ==============================
 // CREATE FIR
@@ -58,13 +56,6 @@ exports.createFIR = async (req, res) => {
       location,
       status_history: [{ status: "pending" }],
     });
-
-    // Send notification email to the citizen
-    const user = await User.findById(citizen);
-    if (user && user.email) {
-      const html = emailTemplates.firRegistrationEmail(user.name, firNumber, complaint_text, crime_type, location);
-      await sendEmail(user.email, 'FIR Registered - Secure Justice', html);
-    }
 
     return res.status(201).json({
       success: true,
@@ -479,28 +470,9 @@ exports.assignOfficer = async (req, res) => {
     fir.assigned_officer = officer_id;
     await fir.save();
 
-    // Send notification email to citizen
-    if (fir.citizen && fir.citizen.email) {
-      const html = `
-        <h1>FIR Officer Assignment</h1>
-        <p>Hi ${fir.citizen.name},</p>
-        <p>An officer has been assigned to your FIR.</p>
-        <p><strong>FIR Number:</strong> ${fir.fir_number}</p>
-        <p><strong>Assigned Officer:</strong> ${officer.name}</p>
-        <p>The officer will be in contact with you soon.</p>
-      `;
-      await sendEmail(fir.citizen.email, 'Officer Assigned to Your FIR - Secure Justice', html);
-    }
-
-    // Send notification email to officer
-    if (officer && officer.email) {
-      const html = emailTemplates.officerAssignmentEmail(officer.name, fir.fir_number, fir.crime_type, fir.location, fir.complaint_text);
-      await sendEmail(officer.email, 'New FIR Assignment - Secure Justice', html);
-    }
-
     return res.status(200).json({
       success: true,
-      message: "Officer assigned successfully. Notifications sent.",
+      message: "Officer assigned successfully.",
       data: fir,
     });
   } catch (error) {
@@ -567,21 +539,9 @@ exports.updateFIRStatusWithNotification = async (req, res) => {
 
     await fir.save();
 
-    // Send notification email to citizen
-    if (fir.citizen && fir.citizen.email) {
-      const html = emailTemplates.statusUpdateEmail(fir.citizen.name, fir.fir_number, oldStatus, status, notes);
-      await sendEmail(fir.citizen.email, `FIR Status Updated to ${status} - Secure Justice`, html);
-    }
-
-    // Send notification email to assigned officer if status changes
-    if (fir.assigned_officer && fir.assigned_officer.email && oldStatus !== status) {
-      const html = emailTemplates.statusUpdateEmail(fir.assigned_officer.name, fir.fir_number, oldStatus, status, notes);
-      await sendEmail(fir.assigned_officer.email, `FIR Status Updated to ${status} - Secure Justice`, html);
-    }
-
     return res.status(200).json({
       success: true,
-      message: "FIR status updated and notifications sent",
+      message: "FIR status updated successfully.",
       data: fir,
     });
   } catch (error) {

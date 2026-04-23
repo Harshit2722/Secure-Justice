@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import AuthLayout from './components/auth/AuthLayout';
 import Login from './components/auth/Login';
 import Register from './components/auth/Register';
+import VerifyEmail from './pages/VerifyEmail';
 import PortalLayout from './components/layout/PortalLayout';
 import MyCases from './pages/MyCases';
 import Settings from './pages/Settings';
@@ -20,6 +21,9 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
       </Route>
+
+      {/* Email Verification Route */}
+      <Route path="/verify-email" element={<VerifyEmail />} />
       
       {/* Protected Portal Routes */}
       <Route element={<PortalLayout />}>

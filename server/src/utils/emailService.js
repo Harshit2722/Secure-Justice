@@ -11,7 +11,7 @@ const transporter = nodemailer.createTransport({
 const sendEmail = async (to, subject, html) => {
     try {
         const mailOptions = {
-            from: process.env.EMAIL_USER,
+            from: `"SecureJustice" <${process.env.EMAIL_USER}>`,
             to,
             subject,
             html

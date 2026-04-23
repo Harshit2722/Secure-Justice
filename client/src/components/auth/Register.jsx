@@ -23,6 +23,7 @@ export default function Register() {
   });
   const [loading, setLoading] = useState(false);
   const [apiError, setApiError] = useState(null);
+  const [apiSuccess, setApiSuccess] = useState(null);
   const [formErrors, setFormErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
 
@@ -64,6 +65,7 @@ export default function Register() {
     e.preventDefault();
     setLoading(true);
     setApiError(null);
+    setApiSuccess(null);
     setFormErrors({});
 
     const errors = validate();
@@ -77,13 +79,17 @@ export default function Register() {
       const data = await register(formData);
       console.log('Registration successful:', data);
       
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.data));
+      // Show success message and redirect to login with verification instructions
+      setApiSuccess('Registration successful! Please check your email and click the verification link to activate your account.');
       
-      navigate('/dashboard');
+      // Redirect to login after 3 seconds
+      setTimeout(() => {
+        navigate('/login');
+      }, 3000);
     } catch (err) {
       console.error('Registration failed:', err);
       setApiError(err.response?.data?.message || 'Oops! Something went wrong. Please check your connection and try again.');
+      setApiSuccess(null);
     } finally {
       setLoading(false);
     }
@@ -96,6 +102,12 @@ export default function Register() {
         <p className="text-on-surface-variant">Takes less than a minute to get started</p>
       </div>
 
+      {apiSuccess && (
+        <div className="mb-6 p-4 rounded-lg bg-emerald-600 text-white text-sm flex items-start gap-3">
+          <span className="material-symbols-outlined mt-0.5">check_circle</span>
+          <span>{apiSuccess}</span>
+        </div>
+      )}
       {apiError && (
         <div className="mb-6 p-4 rounded-lg bg-error-container text-on-error-container text-sm flex items-start gap-3">
           <span className="material-symbols-outlined mt-0.5">error</span>
