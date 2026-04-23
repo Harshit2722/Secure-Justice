@@ -198,7 +198,7 @@ exports.getAllFIRs = async (req, res) => {
 // ==============================
 exports.getFIRsByUser = async (req, res) => {
   try {
-    const citizen = req.user.id;
+    const citizen = req.user._id;
 
     const firs = await FIR.find({ citizen });
 
