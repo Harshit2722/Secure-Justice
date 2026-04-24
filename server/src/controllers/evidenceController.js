@@ -34,7 +34,17 @@ const uploadEvidence = asyncHandler(async (req, res) => {
             if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
             throw new ApiError(403, 'Forbidden: You do not own this FIR');
         }
-    } else if (req.user.role !== 'police') {
+    } else if (req.user.role === 'police') {
+        const fir = await FIR.findById(firId);
+        if (!fir) {
+            if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+            throw new ApiError(404, 'FIR not found');
+        }
+        if (fir.assigned_officer?.toString() !== req.user._id.toString()) {
+            if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+            throw new ApiError(403, 'Forbidden: This case is not assigned to you. You cannot upload evidence.');
+        }
+    } else if (req.user.role !== 'admin') {
         if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
         throw new ApiError(403, 'Forbidden: Unauthorized role');
     }

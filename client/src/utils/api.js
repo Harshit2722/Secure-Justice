@@ -117,4 +117,39 @@ export const getEvidenceByFir = async (firId) => {
   return response.data;
 };
 
+// ==========================================
+// POLICE API FUNCTIONS
+// ==========================================
+
+export const getAllFirs = async (params = {}) => {
+  const response = await api.get('/fir/', { params });
+  return response.data;
+};
+
+export const getPoliceStats = async () => {
+  const response = await api.get('/fir/stats');
+  return response.data;
+};
+
+export const updateFirStatus = async (id, status) => {
+  const response = await api.patch(`/fir/${id}/status`, { status });
+  return response.data;
+};
+
+export const getPoliceOfficers = async () => {
+  const response = await api.get('/user/officers');
+  return response.data;
+};
+
+export const assignOfficer = async (firId, officerId) => {
+  const response = await api.patch(`/fir/${firId}/assign`, { officerId });
+  return response.data;
+};
+
+export const getMyAssignedCases = async (params = {}) => {
+  const query = new URLSearchParams(params).toString();
+  const response = await api.get(`/fir/assigned/me?${query}`);
+  return response.data;
+};
+
 export default api;

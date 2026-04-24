@@ -10,7 +10,9 @@ const {
   updateFIR,
   deleteFIR,
   getFIRByNumber,
+  getPoliceStats,
   assignOfficer,
+  getMyAssignedFIRs,
   updateFIRStatusWithNotification,
 } = require("../controllers/firController");
 
@@ -19,6 +21,9 @@ const { authenticate, authorizeRoles } = require("../middleware/auth.middleware"
 // ==============================
 // FIR ROUTES
 // ==============================
+
+// Police Stats → dashboard
+router.get("/stats", authenticate, authorizeRoles("police"), getPoliceStats);
 
 // Create FIR → logged-in citizen
 router.post("/", authenticate, authorizeRoles("citizen"), createFIR);
@@ -41,6 +46,11 @@ router.patch("/:id", authenticate, authorizeRoles("citizen"), updateFIR);
 // Update FIR status → police only
 router.patch("/:id/status", authenticate, authorizeRoles("police"), updateFIRStatus);
 
+// Get cases assigned to current officer
+router.get("/assigned/me", authenticate, authorizeRoles("police"), getMyAssignedFIRs);
+
+// Assign officer to case → admin only
+router.patch("/:id/assign", authenticate, authorizeRoles("admin"), assignOfficer);
 // Update FIR status with notifications → police only
 router.patch("/:id/status-update", authenticate, authorizeRoles("police"), updateFIRStatusWithNotification);
 

@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useOutletContext, useParams, useNavigate, Link } from 'react-router-dom';
 import { getEvidenceByFir, getCaseById, uploadEvidence } from '../utils/api';
 
 export default function EvidenceDetails() {
+  const { user } = useOutletContext();
   const { firId } = useParams();
   const navigate = useNavigate();
   const [evidence, setEvidence] = useState([]);
@@ -59,6 +60,9 @@ export default function EvidenceDetails() {
     return <div className="animate-pulse space-y-8"><div className="h-8 bg-surface-container w-1/4 rounded"></div><div className="h-64 bg-surface-container rounded-3xl"></div></div>;
   }
 
+  const isAssignedOfficer = fir?.assigned_officer?._id === user.id || fir?.assigned_officer === user.id;
+  const canUpload = user.role === 'admin' || isAssignedOfficer;
+
   return (
     <div className="space-y-8 animate-in fade-in">
       <div className="flex items-center gap-4">
@@ -82,13 +86,15 @@ export default function EvidenceDetails() {
             <p className="text-sm text-on-surface-variant">Total files: {evidence.length}</p>
           </div>
         </div>
-        <button 
-          onClick={() => setShowModal(true)}
-          className="bg-primary text-on-primary px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:bg-primary-dim transition-all shadow-md active:scale-95"
-        >
-          <span className="material-symbols-outlined text-[20px]">add_a_photo</span>
-          Upload New Evidence
-        </button>
+        {canUpload && (
+          <button 
+            onClick={() => setShowModal(true)}
+            className="bg-primary text-on-primary px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:bg-primary-dim transition-all shadow-md active:scale-95"
+          >
+            <span className="material-symbols-outlined text-[20px]">add_a_photo</span>
+            Upload New Evidence
+          </button>
+        )}
       </div>
 
       {/* Evidence Grid */}
@@ -163,14 +169,19 @@ export default function EvidenceDetails() {
           </div>
           <h3 className="text-xl font-bold text-on-surface">No Evidence Found</h3>
           <p className="text-on-surface-variant mt-2 text-center max-w-sm">
-            This case folder is currently empty. Start by uploading supporting documents to build your case.
+            {canUpload 
+              ? "This case folder is currently empty. Start by uploading supporting documents to build your case."
+              : "This case folder is currently empty."
+            }
           </p>
-          <button 
-            onClick={() => setShowModal(true)}
-            className="mt-8 bg-primary/10 text-primary hover:bg-primary hover:text-on-primary px-8 py-3 rounded-xl font-bold transition-all"
-          >
-            Upload First Item
-          </button>
+          {canUpload && (
+            <button 
+              onClick={() => setShowModal(true)}
+              className="mt-8 bg-primary/10 text-primary hover:bg-primary hover:text-on-primary px-8 py-3 rounded-xl font-bold transition-all"
+            >
+              Upload First Item
+            </button>
+          )}
         </div>
       )}
 

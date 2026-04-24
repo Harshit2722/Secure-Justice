@@ -57,6 +57,8 @@ exports.createFIR = async (req, res) => {
       status_history: [{ status: "pending" }],
     });
 
+    await fir.populate("citizen", "name email role");
+
     return res.status(201).json({
       success: true,
       message: "FIR filed successfully",
@@ -81,7 +83,7 @@ exports.getFIRByNumber = async (req, res) => {
     const fir = await FIR.findOne({ fir_number: firNumber }).populate(
       "citizen",
       "name email role"
-    );
+    ).populate("assigned_officer", "name email role");
 
     if (!fir) {
       return res.status(404).json({
@@ -164,7 +166,8 @@ exports.getAllFIRs = async (req, res) => {
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(limit)
-      .populate("citizen", "name email");
+      .populate("citizen", "name email")
+      .populate("assigned_officer", "name email");
 
     const total = await FIR.countDocuments(filter);
 
@@ -185,13 +188,42 @@ exports.getAllFIRs = async (req, res) => {
 };
 
 // ==============================
+// GET POLICE STATS
+// ==============================
+exports.getPoliceStats = async (req, res) => {
+  try {
+    const statusStats = await FIR.aggregate([
+      { $group: { _id: "$status", count: { $sum: 1 } } }
+    ]);
+
+    const crimeTypeStats = await FIR.aggregate([
+      { $group: { _id: "$crime_type", count: { $sum: 1 } } }
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        statusStats,
+        crimeTypeStats
+      }
+    });
+  } catch (error) {
+    console.error("Get Police Stats Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server Error",
+    });
+  }
+};
+
+// ==============================
 // GET FIRs BY USER
 // ==============================
 exports.getFIRsByUser = async (req, res) => {
   try {
     const citizen = req.user._id;
 
-    const firs = await FIR.find({ citizen });
+    const firs = await FIR.find({ citizen }).populate("citizen", "name email");
 
     return res.status(200).json({
       success: true,
@@ -221,10 +253,9 @@ exports.getFIRById = async (req, res) => {
       });
     }
 
-    const fir = await FIR.findById(id).populate(
-      "citizen",
-      "name email role"
-    );
+    const fir = await FIR.findById(id)
+      .populate("citizen", "name email role")
+      .populate("assigned_officer", "name email role");
 
     if (!fir) {
       return res.status(404).json({
@@ -297,6 +328,9 @@ exports.updateFIR = async (req, res) => {
     Object.assign(fir, updates);
     await fir.save();
 
+    await fir.populate("citizen", "name email role");
+    await fir.populate("assigned_officer", "name email role");
+
     return res.status(200).json({
       success: true,
       message: "FIR updated successfully",
@@ -356,10 +390,21 @@ exports.updateFIRStatus = async (req, res) => {
       });
     }
 
+    // RBAC Check: Only assigned officer or Admin can update status
+    if (req.user.role === "police" && fir.assigned_officer?.toString() !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        message: "This case is not assigned to you. You cannot update its status.",
+      });
+    }
+
     fir.status = status;
     fir.status_history.push({ status, updated_by: req.user.id });
 
     await fir.save();
+    
+    await fir.populate("citizen", "name email role");
+    await fir.populate("assigned_officer", "name email role");
 
     return res.status(200).json({
       success: true,
@@ -376,9 +421,108 @@ exports.updateFIRStatus = async (req, res) => {
 };
 
 // ==============================
+// ASSIGN OFFICER (Admin Only)
+// ==============================
+exports.assignOfficer = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { officerId } = req.body;
+
+    if (req.user.role !== "admin") {
+      return res.status(403).json({
+        success: false,
+        message: "Access Denied. Only admins can assign officers.",
+      });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid FIR ID",
+      });
+    }
+
+    const fir = await FIR.findById(id);
+    if (!fir) {
+      return res.status(404).json({
+        success: false,
+        message: "FIR not found",
+      });
+    }
+
+    fir.assigned_officer = officerId;
+    await fir.save();
+
+    await fir.populate("citizen", "name email role");
+    await fir.populate("assigned_officer", "name email role");
+
+    return res.status(200).json({
+      success: true,
+      message: "Officer assigned successfully",
+      data: fir,
+    });
+  } catch (error) {
+    console.error("Assign Officer Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server Error",
+    });
+  }
+};
+
+// ==============================
+// GET MY ASSIGNED CASES (Police Only)
+// ==============================
+exports.getMyAssignedFIRs = async (req, res) => {
+  try {
+    const officerId = req.user.id;
+    const { status, search } = req.query;
+
+    if (req.user.role !== "police") {
+      return res.status(403).json({
+        success: false,
+        message: "Access Denied. Only police officers can access this.",
+      });
+    }
+
+    let filter = { assigned_officer: officerId };
+
+    if (status) {
+      filter.status = {
+        $regex: `^${status}$`,
+        $options: "i",
+      };
+    }
+
+    if (search) {
+      filter.$or = [
+        { fir_number: { $regex: search, $options: "i" } },
+        { complaint_text: { $regex: search, $options: "i" } },
+        { location: { $regex: search, $options: "i" } },
+        { crime_type: { $regex: search, $options: "i" } },
+      ];
+    }
+
+    const firs = await FIR.find(filter)
+      .sort({ updatedAt: -1 })
+      .populate("citizen", "name email");
+
+    return res.status(200).json({
+      success: true,
+      count: firs.length,
+      data: firs,
+    });
+  } catch (error) {
+    console.error("Get My Assigned FIRs Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server Error",
+    });
+  }
+};
+
+// ==============================
 // DELETE FIR
-// 🔒 TODO (Auth Integration):
-// Restrict to 'admin' role only
 // ==============================
 exports.deleteFIR = async (req, res) => {
   try {

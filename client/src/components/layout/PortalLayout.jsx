@@ -16,8 +16,14 @@ export default function PortalLayout() {
       return;
     }
 
-    setUser(JSON.parse(userData));
-  }, [navigate]);
+    const parsedUser = JSON.parse(userData);
+    setUser(parsedUser);
+
+    // Initial redirect based on role if on generic /dashboard
+    if (location.pathname === '/dashboard' && parsedUser.role === 'police') {
+      navigate('/police-dashboard');
+    }
+  }, [navigate, location.pathname]);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -27,12 +33,23 @@ export default function PortalLayout() {
 
   if (!user) return null;
 
-  const navItems = [
+  const citizenNavItems = [
     { name: 'Dashboard', path: '/dashboard', icon: 'dashboard' },
     { name: 'My Cases', path: '/cases', icon: 'gavel' },
     { name: 'Documents', path: '/documents', icon: 'folder' },
     { name: 'Settings', path: '/settings', icon: 'settings' }
   ];
+
+  const policeNavItems = [
+    { name: 'Dashboard', path: '/police-dashboard', icon: 'dashboard' },
+    { name: 'Active Cases', path: '/active-cases', icon: 'list_alt' },
+    { name: 'My Cases', path: '/your-cases', icon: 'assignment' },
+    { name: 'Documents', path: '/documents', icon: 'folder' },
+    { name: 'Settings', path: '/settings', icon: 'settings' }
+  ];
+
+
+  const navItems = user.role === 'police' ? policeNavItems : citizenNavItems;
 
   const notifications = [
     { id: 1, title: 'Welcome', message: 'Welcome to SecureJustice Portal', time: 'Just now', unread: true },
