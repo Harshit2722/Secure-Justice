@@ -9,12 +9,16 @@ export default function PoliceActiveCases() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [search, setSearch] = useState('');
+  const [status, setStatus] = useState('');
+  const [showFilterMenu, setShowFilterMenu] = useState(false);
   const limit = 8;
+
+
 
   const fetchCases = async () => {
     setLoading(true);
     try {
-      const data = await getAllFirs({ page, limit, search });
+      const data = await getAllFirs({ page, limit, search, status });
       if (data.success) {
         setCases(data.data);
         setTotalPages(data.pages);
@@ -27,14 +31,23 @@ export default function PoliceActiveCases() {
   };
 
   useEffect(() => {
-    fetchCases();
-  }, [page]);
+    const timer = setTimeout(() => {
+      fetchCases();
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [page, search, status]);
 
-  const handleSearch = (e) => {
-    e.preventDefault();
+
+  const handleSearchChange = (e) => {
+    setSearch(e.target.value);
     setPage(1);
-    fetchCases();
   };
+
+  const handleStatusChange = (e) => {
+    setStatus(e.target.value);
+    setPage(1);
+  };
+
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -43,26 +56,62 @@ export default function PoliceActiveCases() {
           <h2 className="text-3xl font-extrabold text-on-surface tracking-tight">Active Jurisdiction Cases</h2>
           <p className="text-on-surface-variant font-medium mt-1">Manage and track all First Information Reports across the department.</p>
         </div>
-        
-        <form onSubmit={handleSearch} className="w-full md:w-96 relative group">
-          <input 
-            type="text" 
-            placeholder="Search by FIR, Location, or Type..." 
-            className="w-full bg-surface-container-lowest border border-outline-variant/30 rounded-2xl p-4 pl-12 pr-12 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm group-hover:border-primary/30 transition-all font-medium"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-          <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant group-focus-within:text-primary transition-colors">search</span>
-          {search && (
-            <button 
-              type="button" 
-              onClick={() => { setSearch(''); setPage(1); fetchCases(); }}
-              className="absolute right-4 top-1/2 -translate-y-1/2 p-1 hover:bg-surface-container rounded-full"
+
+        <div className="w-full md:w-auto flex flex-col md:flex-row gap-4 items-center">
+          {/* Search Bar */}
+          <div className="w-full md:w-80 relative group order-1">
+            <input
+              type="text"
+              placeholder="Search jurisdiction..."
+              className="w-full bg-surface-container-lowest border border-outline-variant/30 rounded-2xl p-4 pl-12 pr-12 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm group-hover:border-primary/30 transition-all font-medium"
+              value={search}
+              onChange={handleSearchChange}
+            />
+            <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant group-focus-within:text-primary transition-colors">search</span>
+            {search && (
+              <button
+                type="button"
+                onClick={() => { setSearch(''); setPage(1); }}
+                className="absolute right-4 top-1/2 -translate-y-1/2 p-1 hover:bg-surface-container rounded-full"
+              >
+                <span className="material-symbols-outlined text-sm">close</span>
+              </button>
+            )}
+          </div>
+
+          {/* Status Filter Dropdown */}
+          <div className="relative w-full md:w-auto order-2">
+            <button
+              onClick={() => setShowFilterMenu(!showFilterMenu)}
+              className={`w-12 h-12 rounded-full transition-all flex items-center justify-center border shadow-sm ${status ? 'bg-primary text-on-primary' : 'bg-surface-container-lowest border-outline-variant/30 text-on-surface-variant hover:text-primary hover:bg-surface-container'}`}
+              title="Filter Status"
             >
-              <span className="material-symbols-outlined text-sm">close</span>
+              <span className="material-symbols-outlined text-xl">filter_alt</span>
+              {status && <span className="absolute -top-1 -right-1 w-4 h-4 bg-error text-on-error rounded-full text-[8px] flex items-center justify-center border-2 border-surface font-black">!</span>}
             </button>
-          )}
-        </form>
+
+            {showFilterMenu && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setShowFilterMenu(false)}></div>
+                <div className="absolute right-0 mt-3 w-56 bg-surface-container-lowest border border-outline-variant/20 rounded-2xl shadow-2xl z-50 py-2 animate-in fade-in zoom-in-95 duration-200">
+                  <p className="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-on-surface-variant/50 border-b border-outline-variant/5 mb-1">Filter Jurisdiction</p>
+                  {['', 'pending', 'verified', 'under_investigation', 'closed'].map(s => (
+                    <button
+                      key={s}
+                      onClick={() => { setStatus(s); setPage(1); setShowFilterMenu(false); }}
+                      className={`w-full text-left px-4 py-3 text-xs hover:bg-primary/5 transition-colors capitalize font-bold flex items-center justify-between ${status === s ? 'text-primary' : 'text-on-surface-variant'}`}
+                    >
+                      {s === '' ? 'All Statuses' : s.replace('_', ' ')}
+                      {status === s && <span className="material-symbols-outlined text-sm">check_circle</span>}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+
+
       </div>
 
       <div className="bg-surface-container-lowest rounded-3xl border border-outline-variant/20 shadow-sm overflow-hidden">
@@ -107,21 +156,21 @@ export default function PoliceActiveCases() {
                           {c.location}
                         </div>
                       </td>
-                      <td className="px-6 py-5">
+                      <td className="px-6 py-5 text-center">
                         <div className="flex justify-center">
-                          <div className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-[10px] font-black tracking-widest uppercase ${
-                            c.status === 'closed' ? 'bg-red-100 text-red-700' :
-                            c.status === 'verified' ? 'bg-emerald-100 text-emerald-700' :
-                            c.status === 'pending' ? 'bg-amber-100 text-amber-700' :
-                            'bg-primary-container text-primary-dim'
-                          }`}>
-                            <span className={`w-1.5 h-1.5 rounded-full ${
-                              c.status === 'closed' ? 'bg-red-500' :
-                              c.status === 'verified' ? 'bg-emerald-500' :
-                              c.status === 'pending' ? 'bg-amber-500' :
-                              'bg-primary'
-                            }`}></span>
-                            {c.status}
+                          <div className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-[10px] font-black tracking-widest uppercase ${c.status === 'closed' ? 'bg-red-100 text-red-700' :
+                              c.status === 'verified' ? 'bg-emerald-100 text-emerald-700' :
+                                c.status === 'under_investigation' ? 'bg-blue-100 text-blue-700' :
+                                  c.status === 'pending' ? 'bg-amber-100 text-amber-700' :
+                                    'bg-primary-container text-primary-dim'
+                            }`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${c.status === 'closed' ? 'bg-red-500' :
+                                c.status === 'verified' ? 'bg-emerald-500' :
+                                  c.status === 'under_investigation' ? 'bg-blue-500' :
+                                    c.status === 'pending' ? 'bg-amber-500' :
+                                      'bg-primary'
+                              }`}></span>
+                            {c.status?.replace('_', ' ')}
                           </div>
                         </div>
                       </td>
@@ -143,14 +192,14 @@ export default function PoliceActiveCases() {
                 Page {page} of {totalPages}
               </p>
               <div className="flex gap-2">
-                <button 
+                <button
                   disabled={page === 1}
                   onClick={() => setPage(p => p - 1)}
                   className="px-4 py-2 rounded-xl bg-surface-container-lowest border border-outline-variant/30 text-sm font-bold hover:bg-surface-container disabled:opacity-50 transition-colors"
                 >
                   Previous
                 </button>
-                <button 
+                <button
                   disabled={page === totalPages}
                   onClick={() => setPage(p => p + 1)}
                   className="px-4 py-2 rounded-xl bg-surface-container-lowest border border-outline-variant/30 text-sm font-bold hover:bg-surface-container disabled:opacity-50 transition-colors"

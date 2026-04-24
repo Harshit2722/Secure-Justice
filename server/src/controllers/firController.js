@@ -56,6 +56,8 @@ exports.createFIR = async (req, res) => {
       status_history: [{ status: "pending" }],
     });
 
+    await fir.populate("citizen", "name email role");
+
     return res.status(201).json({
       success: true,
       message: "FIR filed successfully",
@@ -219,7 +221,7 @@ exports.getFIRsByUser = async (req, res) => {
   try {
     const citizen = req.user._id;
 
-    const firs = await FIR.find({ citizen });
+    const firs = await FIR.find({ citizen }).populate("citizen", "name email");
 
     return res.status(200).json({
       success: true,
@@ -325,6 +327,8 @@ exports.updateFIR = async (req, res) => {
     Object.assign(fir, updates);
     await fir.save();
 
+    await fir.populate("citizen", "name email role");
+
     return res.status(200).json({
       success: true,
       message: "FIR updated successfully",
@@ -388,6 +392,8 @@ exports.updateFIRStatus = async (req, res) => {
     fir.status_history.push({ status, updated_by: req.user.id });
 
     await fir.save();
+    
+    await fir.populate("citizen", "name email role");
 
     return res.status(200).json({
       success: true,

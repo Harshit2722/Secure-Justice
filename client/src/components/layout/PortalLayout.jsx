@@ -43,8 +43,10 @@ export default function PortalLayout() {
   const policeNavItems = [
     { name: 'Dashboard', path: '/police-dashboard', icon: 'dashboard' },
     { name: 'Active Cases', path: '/active-cases', icon: 'list_alt' },
+    { name: 'Documents', path: '/documents', icon: 'folder' },
     { name: 'Settings', path: '/settings', icon: 'settings' }
   ];
+
 
   const navItems = user.role === 'police' ? policeNavItems : citizenNavItems;
 
