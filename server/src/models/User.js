@@ -18,7 +18,30 @@ const userSchema = new mongoose.Schema({
         type: String,
         enum: ['citizen', 'police', 'forensic', 'lawyer', 'victim', 'court', 'admin'],
         required: true
+    },
+    isVerified: {
+        type: Boolean,
+        default: false
+    },
+    verificationToken: {
+        type: String
+    },
+    verificationTokenExpiry: {
+        type: Date
+    },
+    otp: {
+        type: String
+    },
+    otpExpiry: {
+        type: Date
+    },
+    resetOtp: {
+        type: String
+    },
+    resetOtpExpiry: {
+        type: Date
     }
-}, { timestamps: true });
-
+}, {
+    timestamps: true
+});
 module.exports = mongoose.model('User', userSchema);

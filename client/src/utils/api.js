@@ -53,6 +53,31 @@ export const register = async (userData) => {
   return response.data;
 };
 
+export const verifyEmailToken = async (token) => {
+  const response = await api.post('/auth/verify-email', { token });
+  return response.data;
+};
+
+export const verifyOTP = async (data) => {
+  const response = await api.post('/auth/verify-otp', data);
+  return response.data;
+};
+
+export const resendOTP = async (data) => {
+  const response = await api.post('/auth/resend-otp', data);
+  return response.data;
+};
+
+export const forgotPassword = async (data) => {
+  const response = await api.post('/auth/forgot-password', data);
+  return response.data;
+};
+
+export const resetPassword = async (data) => {
+  const response = await api.post('/auth/reset-password', data);
+  return response.data;
+};
+
 export const getMyCases = async () => {
   const response = await api.get('/fir/my-firs');
   return response.data;

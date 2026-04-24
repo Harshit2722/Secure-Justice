@@ -1,5 +1,6 @@
 const FIR = require("../models/FIR");
 const mongoose = require("mongoose");
+const User = require("../models/User");
 
 // ==============================
 // CREATE FIR
@@ -549,6 +550,146 @@ exports.deleteFIR = async (req, res) => {
     });
   } catch (error) {
     console.error("Delete FIR Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server Error",
+    });
+  }
+};
+
+// ==============================
+// ASSIGN OFFICER TO FIR
+// ==============================
+exports.assignOfficer = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { officer_id } = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid FIR ID",
+      });
+    }
+
+    if (!officer_id) {
+      return res.status(400).json({
+        success: false,
+        message: "Officer ID is required",
+      });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(officer_id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid Officer ID",
+      });
+    }
+
+    // Check if officer exists and has police role
+    const officer = await User.findById(officer_id);
+    if (!officer) {
+      return res.status(404).json({
+        success: false,
+        message: "Officer not found",
+      });
+    }
+
+    if (officer.role !== "police") {
+      return res.status(400).json({
+        success: false,
+        message: "Only police officers can be assigned to FIR",
+      });
+    }
+
+    // Find and update FIR
+    const fir = await FIR.findById(id).populate("citizen", "name email");
+    if (!fir) {
+      return res.status(404).json({
+        success: false,
+        message: "FIR not found",
+      });
+    }
+
+    fir.assigned_officer = officer_id;
+    await fir.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Officer assigned successfully.",
+      data: fir,
+    });
+  } catch (error) {
+    console.error("Assign Officer Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server Error",
+    });
+  }
+};
+
+// ==============================
+// UPDATE FIR STATUS WITH NOTIFICATIONS
+// ==============================
+exports.updateFIRStatusWithNotification = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, notes } = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid FIR ID",
+      });
+    }
+
+    if (!status) {
+      return res.status(400).json({
+        success: false,
+        message: "Status is required",
+      });
+    }
+
+    const allowedStatuses = [
+      "pending",
+      "verified",
+      "under_investigation",
+      "closed",
+    ];
+
+    if (!allowedStatuses.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid status value",
+      });
+    }
+
+    const fir = await FIR.findById(id).populate("citizen", "name email").populate("assigned_officer", "name email");
+
+    if (!fir) {
+      return res.status(404).json({
+        success: false,
+        message: "FIR not found",
+      });
+    }
+
+    const oldStatus = fir.status;
+    fir.status = status;
+    fir.status_history.push({ 
+      status, 
+      updated_by: req.user.id,
+      notes: notes || ""
+    });
+
+    await fir.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "FIR status updated successfully.",
+      data: fir,
+    });
+  } catch (error) {
+    console.error("Update FIR Status Error:", error);
     return res.status(500).json({
       success: false,
       message: "Server Error",
