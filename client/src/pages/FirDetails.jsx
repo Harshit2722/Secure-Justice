@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useOutletContext, useParams, useNavigate, Link } from 'react-router-dom';
-import { getCaseById, updateFirStatus } from '../utils/api';
+import { getCaseById, updateFirStatus, getPoliceOfficers, assignOfficer } from '../utils/api';
 
 export default function FirDetails() {
   const { user } = useOutletContext();
@@ -11,7 +11,10 @@ export default function FirDetails() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
+  const [showAssignDropdown, setShowAssignDropdown] = useState(false);
   const [updating, setUpdating] = useState(false);
+  const [officers, setOfficers] = useState([]);
+  const [assigning, setAssigning] = useState(false);
 
 
   useEffect(() => {
@@ -29,7 +32,21 @@ export default function FirDetails() {
       }
     };
     fetchFir();
-  }, [id]);
+
+    if (user.role === 'admin') {
+      const fetchOfficers = async () => {
+        try {
+          const data = await getPoliceOfficers();
+          if (data.success) {
+            setOfficers(data.data);
+          }
+        } catch (err) {
+          console.error("Failed to fetch officers", err);
+        }
+      };
+      fetchOfficers();
+    }
+  }, [id, user.role]);
 
   const handleStatusUpdate = async (newStatus) => {
     if (newStatus === fir.status) {
@@ -45,9 +62,25 @@ export default function FirDetails() {
       }
     } catch (err) {
       console.error("Status update failed", err);
-      alert("Failed to update status. Please check your permissions.");
+      alert(err.response?.data?.message || "Failed to update status. Please check your permissions.");
     } finally {
       setUpdating(false);
+    }
+  };
+
+  const handleAssignOfficer = async (officerId) => {
+    setAssigning(true);
+    try {
+      const data = await assignOfficer(id, officerId);
+      if (data.success) {
+        setFir(data.data);
+        setShowAssignDropdown(false);
+      }
+    } catch (err) {
+      console.error("Assignment failed", err);
+      alert("Failed to assign officer.");
+    } finally {
+      setAssigning(false);
     }
   };
 
@@ -66,6 +99,9 @@ export default function FirDetails() {
     );
   }
 
+  const isAssignedOfficer = fir.assigned_officer?._id === user.id || fir.assigned_officer === user.id;
+  const canUpdate = user.role === 'admin' || isAssignedOfficer;
+
   return (
     <div className="space-y-8 animate-in fade-in">
       <div className="flex items-center gap-4">
@@ -74,7 +110,7 @@ export default function FirDetails() {
         </button>
         <h2 className="text-3xl font-extrabold text-on-surface">Case Details</h2>
         <div className="ml-auto flex items-center gap-3">
-          {user.role === 'police' && (
+          {canUpdate && (
             <div className="relative">
               <button 
                 onClick={() => setShowStatusDropdown(!showStatusDropdown)}
@@ -82,7 +118,7 @@ export default function FirDetails() {
                 className="flex items-center gap-2 bg-primary text-on-primary px-5 py-2.5 rounded-xl font-bold transition-all shadow-md active:scale-95 disabled:opacity-50"
               >
                 {updating ? (
-                  <span className="material-symbols-outlined animate-spin">sync</span>
+                  <span className="material-symbols-outlined animate-spin text-[20px]">sync</span>
                 ) : (
                   <span className="material-symbols-outlined text-[20px]">edit_note</span>
                 )}
@@ -172,6 +208,63 @@ export default function FirDetails() {
               <div>
                 <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-primary/80 mb-2">Last Updated</p>
                 <p className="font-bold text-on-surface text-lg tracking-tight">{new Date(fir.updatedAt).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+              </div>
+            </div>
+
+            <div className="mb-8">
+              <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-primary/80 mb-4">Assigned Officer</p>
+              <div className="flex items-center gap-4 bg-primary/5 border border-primary/10 p-4 rounded-2xl relative">
+                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                  <span className="material-symbols-outlined text-2xl">shield_person</span>
+                </div>
+                <div>
+                  <p className="font-bold text-on-surface">{fir.assigned_officer?.name || 'Not Assigned'}</p>
+                  <p className="text-xs text-on-surface-variant font-medium">{fir.assigned_officer?.email || 'Awaiting officer allocation'}</p>
+                </div>
+                <div className="ml-auto flex items-center gap-3">
+                   {user.role === 'admin' && (
+                     <div className="relative">
+                       <button 
+                        onClick={() => setShowAssignDropdown(!showAssignDropdown)}
+                        className="p-2 hover:bg-primary/10 rounded-lg text-primary transition-colors flex items-center justify-center"
+                        title="Assign Officer"
+                       >
+                         <span className="material-symbols-outlined">{fir.assigned_officer ? 'person_search' : 'person_add'}</span>
+                       </button>
+
+                       {showAssignDropdown && (
+                        <>
+                          <div className="fixed inset-0 z-40" onClick={() => setShowAssignDropdown(false)}></div>
+                          <div className="absolute right-0 bottom-full mb-2 w-64 bg-surface-container-lowest border border-outline-variant/20 rounded-2xl shadow-2xl z-50 py-2 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                            <p className="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-on-surface-variant/50 border-b border-outline-variant/5 mb-1">Select Officer</p>
+                            <div className="max-h-48 overflow-y-auto">
+                              {officers.map(officer => (
+                                <button
+                                  key={officer._id}
+                                  onClick={() => handleAssignOfficer(officer._id)}
+                                  className={`w-full text-left px-4 py-3 text-xs hover:bg-primary/5 transition-colors font-bold flex items-center gap-3 ${fir.assigned_officer?._id === officer._id ? 'text-primary' : 'text-on-surface-variant'}`}
+                                >
+                                  <div className="w-6 h-6 rounded-full bg-surface-container flex items-center justify-center text-[10px]">
+                                    {officer.name.charAt(0)}
+                                  </div>
+                                  <div className="flex-1 overflow-hidden">
+                                    <p className="truncate">{officer.name}</p>
+                                    <p className="text-[8px] opacity-60 truncate">{officer.email}</p>
+                                  </div>
+                                  {fir.assigned_officer?._id === officer._id && <span className="material-symbols-outlined text-sm">check</span>}
+                                </button>
+                              ))}
+                              {officers.length === 0 && <p className="p-4 text-[10px] text-center opacity-50">No officers found</p>}
+                            </div>
+                          </div>
+                        </>
+                       )}
+                     </div>
+                   )}
+                   <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${fir.assigned_officer ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                    {fir.assigned_officer ? 'Active' : 'Pending'}
+                   </span>
+                </div>
               </div>
             </div>
 

@@ -111,4 +111,20 @@ export const updateFirStatus = async (id, status) => {
   return response.data;
 };
 
+export const getPoliceOfficers = async () => {
+  const response = await api.get('/user/officers');
+  return response.data;
+};
+
+export const assignOfficer = async (firId, officerId) => {
+  const response = await api.patch(`/fir/${firId}/assign`, { officerId });
+  return response.data;
+};
+
+export const getMyAssignedCases = async (params = {}) => {
+  const query = new URLSearchParams(params).toString();
+  const response = await api.get(`/fir/assigned/me?${query}`);
+  return response.data;
+};
+
 export default api;

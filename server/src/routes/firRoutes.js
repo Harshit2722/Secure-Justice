@@ -11,6 +11,8 @@ const {
   deleteFIR,
   getFIRByNumber,
   getPoliceStats,
+  assignOfficer,
+  getMyAssignedFIRs,
 } = require("../controllers/firController");
 
 const { authenticate, authorizeRoles } = require("../middleware/auth.middleware");
@@ -42,6 +44,12 @@ router.patch("/:id", authenticate, authorizeRoles("citizen"), updateFIR);
 
 // Update FIR status → police only
 router.patch("/:id/status", authenticate, authorizeRoles("police"), updateFIRStatus);
+
+// Get cases assigned to current officer
+router.get("/assigned/me", authenticate, authorizeRoles("police"), getMyAssignedFIRs);
+
+// Assign officer to case → admin only
+router.patch("/:id/assign", authenticate, authorizeRoles("admin"), assignOfficer);
 
 // Delete FIR → admin only
 router.delete("/:id", authenticate, authorizeRoles("admin"), deleteFIR);

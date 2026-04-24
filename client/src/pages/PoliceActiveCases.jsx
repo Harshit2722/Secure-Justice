@@ -130,6 +130,7 @@ export default function PoliceActiveCases() {
                     <th className="px-6 py-5 text-[10px] font-extrabold uppercase tracking-[0.2em] text-on-surface-variant/80">Citizen Info</th>
                     <th className="px-6 py-5 text-[10px] font-extrabold uppercase tracking-[0.2em] text-on-surface-variant/80">Offense Category</th>
                     <th className="px-6 py-5 text-[10px] font-extrabold uppercase tracking-[0.2em] text-on-surface-variant/80">Location</th>
+                    <th className="px-6 py-5 text-[10px] font-extrabold uppercase tracking-[0.2em] text-on-surface-variant/80">Officer</th>
                     <th className="px-6 py-5 text-[10px] font-extrabold uppercase tracking-[0.2em] text-on-surface-variant/80 text-center">Status</th>
                     <th className="px-6 py-5 text-[10px] font-extrabold uppercase tracking-[0.2em] text-on-surface-variant/80 text-right">Actions</th>
                   </tr>
@@ -156,6 +157,18 @@ export default function PoliceActiveCases() {
                           {c.location}
                         </div>
                       </td>
+                      <td className="px-6 py-5">
+                        {c.assigned_officer ? (
+                          <div className="flex items-center gap-2">
+                            <div className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px] font-bold">
+                              {c.assigned_officer.name?.charAt(0)}
+                            </div>
+                            <span className="text-xs font-bold text-on-surface">{c.assigned_officer.name}</span>
+                          </div>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded bg-surface-container text-on-surface-variant/50 text-[10px] font-bold uppercase tracking-wider">Unassigned</span>
+                        )}
+                      </td>
                       <td className="px-6 py-5 text-center">
                         <div className="flex justify-center">
                           <div className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-[10px] font-black tracking-widest uppercase ${c.status === 'closed' ? 'bg-red-100 text-red-700' :
@@ -175,9 +188,9 @@ export default function PoliceActiveCases() {
                         </div>
                       </td>
                       <td className="px-6 py-5 text-right">
-                        <Link to={`/cases/${c._id}`} className="inline-flex items-center gap-2 px-4 py-2 bg-surface-container hover:bg-primary hover:text-on-primary rounded-xl text-xs font-bold transition-all shadow-sm">
-                          Manage Case
-                          <span className="material-symbols-outlined text-sm">open_in_new</span>
+                        <Link to={`/cases/${c._id}`} className="inline-flex items-center gap-2 px-5 py-2 bg-surface-container-high hover:bg-primary hover:text-on-primary rounded-xl text-[11px] font-black transition-all shadow-sm whitespace-nowrap active:scale-95 hover:shadow-md group/btn">
+                          View Case
+                          <span className="material-symbols-outlined text-[16px] group-hover/btn:translate-x-0.5 transition-transform">arrow_right_alt</span>
                         </Link>
                       </td>
                     </tr>

@@ -80,3 +80,10 @@ exports.deleteUser = asyncHandler(async (req, res) => {
     message: "User profile deleted successfully.",
   });
 });
+exports.getPoliceOfficers = asyncHandler(async (req, res) => {
+  const officers = await User.find({ role: 'police' }).select("name email role");
+  res.status(200).json({
+    success: true,
+    data: officers
+  });
+});

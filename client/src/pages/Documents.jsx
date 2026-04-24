@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useOutletContext, Link } from 'react-router-dom';
-import { getMyCases, getAllFirs } from '../utils/api';
+import { getMyCases, getAllFirs, getMyAssignedCases } from '../utils/api';
+
 const CRIME_THEMES = {
   theft: { border: 'border-l-[#fc87aaff]', bg: 'bg-[#fc87aaff]/5', text: 'text-[#be1d46ff]', icon: 'text-[#fc87aaff]' },
   fraud: { border: 'border-l-[#6695ecff]', bg: 'bg-[#6695ecff]/5', text: 'text-[#059aebff]', icon: 'text-[#6695ecff]' },
@@ -20,7 +21,15 @@ export default function Documents() {
   useEffect(() => {
     const fetchCases = async () => {
       try {
-        const data = await getAllFirs({ search: searchTerm, status: statusFilter });
+        let data;
+        if (user.role === 'police') {
+          // Officers see only their assigned cases' documents (Server-side filtered)
+          data = await getMyAssignedCases({ search: searchTerm, status: statusFilter });
+        } else {
+          // Admins see everything, Citizens see their own (handled by backend)
+          data = await getAllFirs({ search: searchTerm, status: statusFilter });
+        }
+        
         if (data.success) {
           setCases(data.data);
         }
@@ -35,7 +44,7 @@ export default function Documents() {
       fetchCases();
     }, 300);
     return () => clearTimeout(timer);
-  }, [searchTerm, statusFilter]);
+  }, [searchTerm, statusFilter, user.role]);
 
 
   if (loading) {
@@ -143,7 +152,7 @@ export default function Documents() {
               
               <div className="relative z-10">
                 <div className="flex justify-between items-start mb-5">
-                  <span className="text-[10px] font-black text-primary/70 uppercase tracking-[0.15em] bg-primary/10 px-2.5 py-1 rounded-lg border border-primary/5">
+                  <span className="text-[11px] font-black text-primary uppercase tracking-[0.15em] bg-primary/10 px-3 py-1.5 rounded-xl border border-primary/20">
                     #{c.fir_number}
                   </span>
                   <div className="w-10 h-10 rounded-xl bg-surface-container text-on-surface-variant flex items-center justify-center group-hover:bg-primary group-hover:text-on-primary transition-all duration-300">

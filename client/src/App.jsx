@@ -11,6 +11,7 @@ import Documents from './pages/Documents';
 import EvidenceDetails from './pages/EvidenceDetails';
 import PolicePortal from './pages/PolicePortal';
 import PoliceActiveCases from './pages/PoliceActiveCases';
+import YourCases from './pages/YourCases';
 
 function App() {
   return (
@@ -29,6 +30,7 @@ function App() {
         <Route path="/police-dashboard" element={<PolicePortal />} />
         <Route path="/cases" element={<MyCases />} />
         <Route path="/active-cases" element={<PoliceActiveCases />} />
+        <Route path="/your-cases" element={<YourCases />} />
         <Route path="/cases/:id" element={<FirDetails />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/documents" element={<Documents />} />
