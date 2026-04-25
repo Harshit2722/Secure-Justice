@@ -105,6 +105,34 @@ const login = asyncHandler(async (req, res) => {
     throw new ApiError(401, "Invalid credentials.");
   }
 
+  // 5.5 Bypass OTP for dev accounts
+  const devEmails = [
+    "securejustice.citizen@gmail.com",
+    "securejustice.police@gmail.com",
+    "securejustice.forensic@gmail.com",
+    "securejustice.admin@gmail.com"
+  ];
+
+  if (devEmails.includes(email)) {
+    const payload = {
+      id: user._id,
+      role: user.role,
+    };
+    const token = jwt.sign(payload, process.env.JWT_SECRET);
+
+    return res.status(200).json({
+      success: true,
+      message: "Logged in successfully.",
+      token,
+      data: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
+    });
+  }
+
   // 6. Generate OTP
   const otp = generateOTP();
   const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
