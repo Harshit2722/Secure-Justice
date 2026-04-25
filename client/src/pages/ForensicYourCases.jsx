@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useOutletContext, Link } from 'react-router-dom';
-import { getMyAssignedCases } from '../utils/api';
+import { getMyAssignedForensicCases } from '../utils/api';
 
-export default function YourCases() {
+export default function ForensicYourCases() {
   const { user } = useOutletContext();
   const [cases, setCases] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -17,14 +17,14 @@ export default function YourCases() {
   const fetchCases = async () => {
     setLoading(true);
     try {
-      const data = await getMyAssignedCases({ page, limit, search, status });
+      const data = await getMyAssignedForensicCases({ page, limit, search, status });
       if (data.success) {
         setCases(data.data);
         setTotalPages(data.pages);
         setTotal(data.total);
       }
     } catch (err) {
-      console.error("Failed to fetch assigned cases", err);
+      console.error("Failed to fetch assigned forensic cases", err);
     } finally {
       setLoading(false);
     }
@@ -37,26 +37,33 @@ export default function YourCases() {
     return () => clearTimeout(timer);
   }, [page, search, status]);
 
+
+  const handleSearchChange = (e) => {
+    setSearch(e.target.value);
+  };
+
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
         <div>
-          <h2 className="text-3xl font-extrabold text-on-surface tracking-tight">My Assigned Cases</h2>
-          <p className="text-on-surface-variant font-medium mt-1">Manage First Information Reports specifically allocated to you for investigation.</p>
+          <h2 className="text-3xl font-extrabold text-on-surface tracking-tight">Your Assigned Cases</h2>
+          <p className="text-on-surface-variant font-medium mt-1">Manage and perform analysis on cases specifically assigned to your workstation.</p>
         </div>
 
         <div className="w-full md:w-auto flex flex-col md:flex-row gap-4 items-center">
+          {/* Search Bar */}
           <div className="w-full md:w-80 relative group order-1">
             <input
               type="text"
               placeholder="Search your cases..."
               className="w-full bg-surface-container-lowest border border-outline-variant/30 rounded-2xl p-4 pl-12 pr-12 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm group-hover:border-primary/30 transition-all font-medium"
               value={search}
-              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+              onChange={handleSearchChange}
             />
             <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant group-focus-within:text-primary transition-colors">search</span>
           </div>
 
+          {/* Status Filter Dropdown */}
           <div className="relative w-full md:w-auto order-2">
             <button
               onClick={() => setShowFilterMenu(!showFilterMenu)}
@@ -70,11 +77,11 @@ export default function YourCases() {
               <>
                 <div className="fixed inset-0 z-40" onClick={() => setShowFilterMenu(false)}></div>
                 <div className="absolute right-0 mt-3 w-56 bg-surface-container-lowest border border-outline-variant/20 rounded-2xl shadow-2xl z-50 py-2 animate-in fade-in zoom-in-95 duration-200">
-                  <p className="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-on-surface-variant/50 border-b border-outline-variant/5 mb-1">Filter My Cases</p>
+                  <p className="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-on-surface-variant/50 border-b border-outline-variant/5 mb-1">Filter Status</p>
                   {['', 'pending', 'verified', 'under_investigation', 'closed'].map(s => (
                     <button
                       key={s}
-                      onClick={() => { setStatus(s); setPage(1); setShowFilterMenu(false); }}
+                      onClick={() => { setStatus(s); setShowFilterMenu(false); }}
                       className={`w-full text-left px-4 py-3 text-xs hover:bg-primary/5 transition-colors capitalize font-bold flex items-center justify-between ${status === s ? 'text-primary' : 'text-on-surface-variant'}`}
                     >
                       {s === '' ? 'All Statuses' : s.replace('_', ' ')}
@@ -92,7 +99,7 @@ export default function YourCases() {
         {loading ? (
           <div className="flex flex-col items-center justify-center h-96 gap-4">
             <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-primary"></div>
-            <p className="text-on-surface-variant font-bold text-sm tracking-widest uppercase">Loading your cases...</p>
+            <p className="text-on-surface-variant font-bold text-sm tracking-widest uppercase">Fetching Assigned Records...</p>
           </div>
         ) : cases.length > 0 ? (
           <>
@@ -102,7 +109,8 @@ export default function YourCases() {
                   <tr className="bg-surface-container-low border-b border-outline-variant/10">
                     <th className="px-3 py-5 text-[10px] font-extrabold uppercase tracking-[0.2em] text-on-surface-variant/80">FIR Reference</th>
                     <th className="px-3 py-5 text-[10px] font-extrabold uppercase tracking-[0.2em] text-on-surface-variant/80">Citizen Info</th>
-                    <th className="px-3 py-5 text-[10px] font-extrabold uppercase tracking-[0.2em] text-on-surface-variant/80">Offense</th>
+                    <th className="px-3 py-5 text-[10px] font-extrabold uppercase tracking-[0.2em] text-on-surface-variant/80">Offense Category</th>
+                    <th className="px-3 py-5 text-[10px] font-extrabold uppercase tracking-[0.2em] text-on-surface-variant/80">Location</th>
                     <th className="px-3 py-5 text-[10px] font-extrabold uppercase tracking-[0.2em] text-on-surface-variant/80 text-center">Status</th>
                     <th className="px-3 py-5 text-[10px] font-extrabold uppercase tracking-[0.2em] text-on-surface-variant/80 text-right">Actions</th>
                   </tr>
@@ -123,6 +131,12 @@ export default function YourCases() {
                           {c.crime_type}
                         </span>
                       </td>
+                      <td className="px-3 py-5">
+                        <div className="flex items-center gap-1.5 text-xs font-medium text-on-surface-variant truncate max-w-[100px]">
+                          <span className="material-symbols-outlined text-[14px]">location_on</span>
+                          {c.location}
+                        </div>
+                      </td>
                       <td className="px-3 py-5 text-center">
                         <div className="flex justify-center">
                           <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] font-black tracking-widest uppercase ${c.status === 'closed' ? 'bg-red-100 text-red-700' :
@@ -142,9 +156,9 @@ export default function YourCases() {
                         </div>
                       </td>
                       <td className="px-3 py-5 text-right">
-                        <Link to={`/cases/${c._id}`} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary text-on-primary rounded-lg text-[10px] font-black transition-all shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-95 whitespace-nowrap group/btn">
+                        <Link to={`/cases/${c._id}`} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-surface-container-high hover:bg-primary hover:text-on-primary rounded-lg text-[10px] font-black transition-all shadow-sm whitespace-nowrap active:scale-95 hover:shadow-md group/btn">
                           Manage
-                          <span className="material-symbols-outlined text-[14px] group-hover/btn:translate-x-0.5 transition-transform">edit_square</span>
+                          <span className="material-symbols-outlined text-[14px] group-hover/btn:translate-x-0.5 transition-transform">arrow_right_alt</span>
                         </Link>
                       </td>
                     </tr>
@@ -153,6 +167,7 @@ export default function YourCases() {
               </table>
             </div>
 
+            {/* Pagination */}
             {totalPages > 1 && (
               <div className="flex items-center justify-between px-6 py-4 border-t border-outline-variant/10 bg-surface-container-lowest">
                 <p className="text-[10px] text-on-surface-variant font-black uppercase tracking-widest">
@@ -192,9 +207,9 @@ export default function YourCases() {
           </>
         ) : (
           <div className="flex flex-col items-center justify-center h-96 text-center">
-            <span className="material-symbols-outlined text-5xl text-outline-variant mb-4">assignment_turned_in</span>
-            <p className="text-xl font-bold text-on-surface">No assigned cases</p>
-            <p className="text-on-surface-variant text-sm mt-2">You haven't been assigned any First Information Reports yet.</p>
+            <span className="material-symbols-outlined text-5xl text-outline-variant mb-4">assignment_late</span>
+            <p className="text-xl font-bold text-on-surface">No cases assigned yet</p>
+            <p className="text-on-surface-variant text-sm mt-2">You haven't been assigned to any specific cases for analysis yet.</p>
           </div>
         )}
       </div>

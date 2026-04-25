@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useOutletContext, useParams, useNavigate, Link } from 'react-router-dom';
-import { getCaseById, updateFirStatus, getPoliceOfficers, assignOfficer } from '../utils/api';
+import { getCaseById, updateFirStatus, getPoliceOfficers, assignOfficer, getForensicExperts, assignForensic } from '../utils/api';
 
 export default function FirDetails() {
   const { user } = useOutletContext();
@@ -15,6 +15,9 @@ export default function FirDetails() {
   const [updating, setUpdating] = useState(false);
   const [officers, setOfficers] = useState([]);
   const [assigning, setAssigning] = useState(false);
+  const [forensicExperts, setForensicExperts] = useState([]);
+  const [showForensicDropdown, setShowForensicDropdown] = useState(false);
+  const [statusUpdateError, setStatusUpdateError] = useState(null);
 
 
   useEffect(() => {
@@ -34,17 +37,21 @@ export default function FirDetails() {
     fetchFir();
 
     if (user.role === 'admin') {
-      const fetchOfficers = async () => {
+      const fetchStaff = async () => {
         try {
-          const data = await getPoliceOfficers();
-          if (data.success) {
-            setOfficers(data.data);
+          const officerData = await getPoliceOfficers();
+          if (officerData.success) {
+            setOfficers(officerData.data);
+          }
+          const forensicData = await getForensicExperts();
+          if (forensicData.success) {
+            setForensicExperts(forensicData.data);
           }
         } catch (err) {
-          console.error("Failed to fetch officers", err);
+          console.error("Failed to fetch staff", err);
         }
       };
-      fetchOfficers();
+      fetchStaff();
     }
   }, [id, user.role]);
 
@@ -62,7 +69,7 @@ export default function FirDetails() {
       }
     } catch (err) {
       console.error("Status update failed", err);
-      alert(err.response?.data?.message || "Failed to update status. Please check your permissions.");
+      setStatusUpdateError(err.response?.data?.message || "Failed to update status. Please check your permissions.");
     } finally {
       setUpdating(false);
     }
@@ -79,6 +86,22 @@ export default function FirDetails() {
     } catch (err) {
       console.error("Assignment failed", err);
       alert("Failed to assign officer.");
+    } finally {
+      setAssigning(false);
+    }
+  };
+
+  const handleAssignForensic = async (forensicId) => {
+    setAssigning(true);
+    try {
+      const data = await assignForensic(id, forensicId);
+      if (data.success) {
+        setFir(data.data);
+        setShowForensicDropdown(false);
+      }
+    } catch (err) {
+      console.error("Assignment failed", err);
+      alert("Failed to assign forensic expert.");
     } finally {
       setAssigning(false);
     }
@@ -114,8 +137,9 @@ export default function FirDetails() {
             <div className="relative">
               <button 
                 onClick={() => setShowStatusDropdown(!showStatusDropdown)}
-                disabled={updating}
-                className="flex items-center gap-2 bg-primary text-on-primary px-5 py-2.5 rounded-xl font-bold transition-all shadow-md active:scale-95 disabled:opacity-50"
+                disabled={updating || (user.role === 'police' && (!fir.assigned_officer || !fir.assigned_forensic))}
+                className="flex items-center gap-2 bg-primary text-on-primary px-5 py-2.5 rounded-xl font-bold transition-all shadow-md active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                title={user.role === 'police' && (!fir.assigned_officer || !fir.assigned_forensic) ? "Both Police and Forensic Expert must be assigned to update status" : "Update Case Status"}
               >
                 {updating ? (
                   <span className="material-symbols-outlined animate-spin text-[20px]">sync</span>
@@ -135,17 +159,33 @@ export default function FirDetails() {
                       { val: 'verified', label: 'Verified', icon: 'check_circle', color: 'text-emerald-500' },
                       { val: 'under_investigation', label: 'Under Investigation', icon: 'search', color: 'text-blue-500' },
                       { val: 'closed', label: 'Closed Case', icon: 'lock', color: 'text-red-500' }
-                    ].map(s => (
-                      <button
-                        key={s.val}
-                        onClick={() => handleStatusUpdate(s.val)}
-                        className={`w-full text-left px-4 py-3 text-xs hover:bg-primary/5 transition-colors capitalize font-bold flex items-center gap-3 ${fir.status === s.val ? 'text-primary' : 'text-on-surface-variant'}`}
-                      >
-                        <span className={`material-symbols-outlined text-lg ${s.color}`}>{s.icon}</span>
-                        {s.label}
-                        {fir.status === s.val && <span className="material-symbols-outlined text-sm ml-auto">check</span>}
-                      </button>
-                    ))}
+                    ].map(s => {
+                      // Logic for non-selectable options
+                      let isDisabled = false;
+                      if (fir.status === 'under_investigation' && s.val !== 'closed' && s.val !== 'under_investigation') {
+                        isDisabled = true;
+                      }
+                      if (fir.status === 'closed' && s.val !== 'under_investigation' && s.val !== 'closed') {
+                        isDisabled = true;
+                      }
+                      // Also pending is always disabled once changed
+                      if (fir.status !== 'pending' && s.val === 'pending') {
+                        isDisabled = true;
+                      }
+
+                      return (
+                        <button
+                          key={s.val}
+                          onClick={() => !isDisabled && handleStatusUpdate(s.val)}
+                          disabled={isDisabled}
+                          className={`w-full text-left px-4 py-3 text-xs hover:bg-primary/5 transition-colors capitalize font-bold flex items-center gap-3 ${fir.status === s.val ? 'text-primary' : 'text-on-surface-variant'} ${isDisabled ? 'opacity-30 cursor-not-allowed' : ''}`}
+                        >
+                          <span className={`material-symbols-outlined text-lg ${s.color}`}>{s.icon}</span>
+                          {s.label}
+                          {fir.status === s.val && <span className="material-symbols-outlined text-sm ml-auto">check</span>}
+                        </button>
+                      );
+                    })}
                   </div>
                 </>
               )}
@@ -268,6 +308,63 @@ export default function FirDetails() {
               </div>
             </div>
 
+            <div className="mb-8">
+              <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-primary/80 mb-4">Assigned Forensic Expert</p>
+              <div className="flex items-center gap-4 bg-primary/5 border border-primary/10 p-4 rounded-2xl relative">
+                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                  <span className="material-symbols-outlined text-2xl">science</span>
+                </div>
+                <div>
+                  <p className="font-bold text-on-surface">{fir.assigned_forensic?.name || 'Not Assigned'}</p>
+                  <p className="text-xs text-on-surface-variant font-medium">{fir.assigned_forensic?.email || 'Awaiting forensic allocation'}</p>
+                </div>
+                <div className="ml-auto flex items-center gap-3">
+                   {user.role === 'admin' && (
+                     <div className="relative">
+                       <button 
+                        onClick={() => setShowForensicDropdown(!showForensicDropdown)}
+                        className="p-2 hover:bg-primary/10 rounded-lg text-primary transition-colors flex items-center justify-center"
+                        title="Assign Forensic Expert"
+                       >
+                         <span className="material-symbols-outlined">{fir.assigned_forensic ? 'person_search' : 'person_add'}</span>
+                       </button>
+
+                       {showForensicDropdown && (
+                        <>
+                          <div className="fixed inset-0 z-40" onClick={() => setShowForensicDropdown(false)}></div>
+                          <div className="absolute right-0 bottom-full mb-2 w-64 bg-surface-container-lowest border border-outline-variant/20 rounded-2xl shadow-2xl z-50 py-2 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                            <p className="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-on-surface-variant/50 border-b border-outline-variant/5 mb-1">Select Expert</p>
+                            <div className="max-h-48 overflow-y-auto">
+                              {forensicExperts.map(expert => (
+                                <button
+                                  key={expert._id}
+                                  onClick={() => handleAssignForensic(expert._id)}
+                                  className={`w-full text-left px-4 py-3 text-xs hover:bg-primary/5 transition-colors font-bold flex items-center gap-3 ${fir.assigned_forensic?._id === expert._id ? 'text-primary' : 'text-on-surface-variant'}`}
+                                >
+                                  <div className="w-6 h-6 rounded-full bg-surface-container flex items-center justify-center text-[10px]">
+                                    {expert.name.charAt(0)}
+                                  </div>
+                                  <div className="flex-1 overflow-hidden">
+                                    <p className="truncate">{expert.name}</p>
+                                    <p className="text-[8px] opacity-60 truncate">{expert.email}</p>
+                                  </div>
+                                  {fir.assigned_forensic?._id === expert._id && <span className="material-symbols-outlined text-sm">check</span>}
+                                </button>
+                              ))}
+                              {forensicExperts.length === 0 && <p className="p-4 text-[10px] text-center opacity-50">No forensic experts found</p>}
+                            </div>
+                          </div>
+                        </>
+                       )}
+                     </div>
+                   )}
+                   <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${fir.assigned_forensic ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                    {fir.assigned_forensic ? 'Active' : 'Pending'}
+                   </span>
+                </div>
+              </div>
+            </div>
+
             <div>
               <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-primary/80 mb-4">Complaint Description</p>
               <div className="bg-surface-container p-6 rounded-2xl border border-outline-variant/10">
@@ -302,8 +399,7 @@ export default function FirDetails() {
                 <span className="material-symbols-outlined text-primary">history</span>
                 Status History
               </h3>
-              <div className="max-h-[220px] overflow-y-auto pr-2 scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-                <style>{`.scrollbar-hide::-webkit-scrollbar { display: none; }`}</style>
+              <div className="max-h-[220px] overflow-y-auto pr-2">
                 <div className="space-y-8 relative before:absolute before:inset-0 before:ml-0.5 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-outline-variant/20 before:to-transparent">
 
                 {[...fir.status_history].reverse().map((history, index) => (
@@ -343,6 +439,27 @@ export default function FirDetails() {
         </div>
 
       </div>
+
+      {/* Status Update Error Modal */}
+      {statusUpdateError && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-surface-container-lowest w-full max-w-md rounded-3xl p-8 shadow-2xl animate-in zoom-in-95 duration-300 border border-outline-variant/10 text-center">
+            <div className="w-20 h-20 bg-error/10 text-error rounded-full flex items-center justify-center mx-auto mb-6">
+              <span className="material-symbols-outlined text-4xl">warning</span>
+            </div>
+            <h3 className="text-2xl font-extrabold text-on-surface mb-4">Procedural Block</h3>
+            <p className="text-on-surface-variant leading-relaxed mb-8">
+              {statusUpdateError}
+            </p>
+            <button 
+              onClick={() => setStatusUpdateError(null)}
+              className="w-full py-4 bg-primary text-on-primary rounded-xl font-bold tracking-widest uppercase text-xs hover:bg-primary-dim transition-all shadow-lg active:scale-[0.98]"
+            >
+              Acknowledged
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

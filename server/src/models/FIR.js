@@ -43,6 +43,12 @@ const firSchema = new mongoose.Schema(
       default: null,
     },
 
+    assigned_forensic: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+
     status_history: [
       {
         status: {

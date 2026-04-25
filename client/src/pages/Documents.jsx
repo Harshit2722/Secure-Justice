@@ -25,6 +25,10 @@ export default function Documents() {
         if (user.role === 'police') {
           // Officers see only their assigned cases' documents (Server-side filtered)
           data = await getMyAssignedCases({ search: searchTerm, status: statusFilter });
+        } else if (user.role === 'forensic') {
+          // Forensic experts see only their assigned cases' documents
+          const { getMyAssignedForensicCases } = await import('../utils/api');
+          data = await getMyAssignedForensicCases({ search: searchTerm, status: statusFilter });
         } else {
           // Admins see everything, Citizens see their own (handled by backend)
           data = await getAllFirs({ search: searchTerm, status: statusFilter });
@@ -189,7 +193,9 @@ export default function Documents() {
           <p className="text-on-surface-variant mt-2 text-center max-w-sm">
             {user.role === 'police'
               ? "There are currently no active cases with evidence in the jurisdiction."
-              : "You haven't filed any cases yet. Documents will appear here once you file a complaint with supporting evidence."}
+              : user.role === 'forensic' 
+                ? "You have not been assigned to any cases yet."
+                : "You haven't filed any cases yet. Documents will appear here once you file a complaint with supporting evidence."}
           </p>
           {user.role === 'citizen' && (
             <Link to="/dashboard" className="mt-6 text-primary font-bold hover:underline">File a Complaint</Link>

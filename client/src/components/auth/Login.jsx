@@ -147,7 +147,12 @@ export default function Login() {
       console.log('OTP verified:', data);
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.data));
-      navigate('/dashboard');
+      
+      if (data.data.role === 'forensic') {
+        navigate('/forensics');
+      } else {
+        navigate('/dashboard');
+      }
     } catch (err) {
       console.error('OTP verification failed:', err);
       setApiError(err.response?.data?.message || 'Invalid OTP. Please try again.');
