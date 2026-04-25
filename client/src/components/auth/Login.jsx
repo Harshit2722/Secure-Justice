@@ -116,10 +116,23 @@ export default function Login() {
 
     try {
       const data = await login(formData);
-      console.log('Login OTP sent:', data);
-      setLoginEmail(formData.email);
-      setCurrentView('otp');
-      setApiError(null);
+      
+      if (data.token) {
+        console.log('Login successful (Dev Bypass):', data);
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.data));
+        
+        if (data.data.role === 'forensic') {
+          navigate('/forensics');
+        } else {
+          navigate('/dashboard');
+        }
+      } else {
+        console.log('Login OTP sent:', data);
+        setLoginEmail(formData.email);
+        setCurrentView('otp');
+        setApiError(null);
+      }
     } catch (err) {
       console.error('Login failed:', err);
       setApiError(err.response?.data?.message || 'Invalid credentials. Please verify and try again.');
