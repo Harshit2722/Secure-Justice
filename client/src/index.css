@@ -52,6 +52,14 @@
   --color-on-error-container: #752121;
   --color-outline: #717c82;
   --color-on-secondary-container: #435368;
+  
+  --color-police: #2563eb;
+  --color-police-container: #dbeafe;
+  --color-on-police-container: #1e40af;
+  
+  --color-forensic: #9333ea;
+  --color-forensic-container: #f3e8ff;
+  --color-on-forensic-container: #6b21a8;
 
   --font-headline: "Manrope", sans-serif;
   --font-body: "Manrope", sans-serif;
@@ -93,6 +101,14 @@
     --color-inverse-surface: #e1e3e4;
     --color-inverse-on-surface: #2d3133;
     --color-inverse-primary: #005eb3;
+
+    --color-police: #60a5fa;
+    --color-police-container: #1e3a8a;
+    --color-on-police-container: #dbeafe;
+
+    --color-forensic: #c084fc;
+    --color-forensic-container: #581c87;
+    --color-on-forensic-container: #f3e8ff;
   }
 }
 

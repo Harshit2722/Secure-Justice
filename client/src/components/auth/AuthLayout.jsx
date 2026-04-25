@@ -1,8 +1,11 @@
 import { Outlet, Link } from 'react-router-dom';
+import FloatingBackground from '../layout/FloatingBackground';
 
 export default function AuthLayout() {
+
   return (
     <div className="h-screen flex flex-col selection:bg-primary-container selection:text-on-primary-container bg-surface text-on-surface font-manrope overflow-hidden relative">
+      <FloatingBackground />
       {/* TopNavBar - Always Dark per design requirement */}
       <nav className="fixed top-0 w-full z-50 bg-[#0f172a] border-b border-white/5">
         <div className="flex justify-between items-center px-8 py-4 max-w-full mx-auto">
@@ -17,6 +20,7 @@ export default function AuthLayout() {
 
       {/* Main Content Area - Light/Dark responsive middle */}
       <main className="flex-1 overflow-y-auto hide-scrollbar scroll-smooth pt-32 pb-32">
+
         {/* Abstract Architectural Background Elements */}
         <div className="absolute top-0 right-0 w-1/2 h-full bg-surface-container-low/50 -skew-x-12 translate-x-1/4 pointer-events-none"></div>
         <div className="absolute bottom-0 left-0 w-1/4 h-1/2 bg-surface-container-high/20 blur-3xl pointer-events-none"></div>
@@ -58,10 +62,7 @@ export default function AuthLayout() {
         </div>
       </main>
 
-      {/* Decorative Illustration Background */}
-      <div className="fixed bottom-0 right-0 w-[40vw] h-[409px] z-0 opacity-10 pointer-events-none">
-        <img className="w-full h-full object-contain" alt="abstract architectural sketch" src="https://lh3.googleusercontent.com/aida-public/AB6AXuANoclNbLJVs-naLTYtdbwpGZT8ClMQmraAhHpo2kDPM5fFTI-CgUGX26m6WTtGaaDS5q5R1U6cfoDo3NMmiqMVXuM1Jkd0PEyMZ6It_fsTfxP7hfuyJk1DGyGS3gIm04Z5kutiwIaj1E62Fp-m3KxPvrfOFYvm-H17z9ThFOmBtITrPSPynV5NRb09MnSriz1HDYXA4daWyOH3kN6eX-LI8NaqGYmwnLOoFAUmKwMao0YkLKwgoNFLy5zmdOA3i8Prfmq87sv7lsI" />
-      </div>
+
 
       {/* Footer - Always Dark per design requirement */}
       <footer className="fixed bottom-0 left-0 w-full bg-[#0f172a] border-t border-white/5 z-50">

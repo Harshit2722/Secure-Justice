@@ -17,14 +17,12 @@ exports.updateUserProfile = asyncHandler(async (req, res) => {
     throw new ApiError(404, "User not found.");
   }
 
-  // For SecureJustice, we require the current password for ANY profile update (name or password)
-  if (!oldPassword) {
-    throw new ApiError(400, "Current password is required to save changes.");
-  }
-
-  const isMatch = await bcrypt.compare(oldPassword, user.password);
-  if (!isMatch) {
-    throw new ApiError(401, "Current password incorrect.");
+  // If oldPassword is provided, verify it (needed for password change)
+  if (oldPassword) {
+    const isMatch = await bcrypt.compare(oldPassword, user.password);
+    if (!isMatch) {
+      throw new ApiError(401, "Current password incorrect.");
+    }
   }
 
   const updates = {};
@@ -32,8 +30,9 @@ exports.updateUserProfile = asyncHandler(async (req, res) => {
   if (email) updates.email = email;
   
   if (password) {
+    // If updating password, oldPassword MUST have been provided and verified above
     if (!oldPassword) {
-      throw new ApiError(400, "Old password is required to change your password.");
+      throw new ApiError(400, "Current password is required to set a new password.");
     }
 
     const salt = await bcrypt.genSalt(10);

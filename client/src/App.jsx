@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import AuthLayout from './components/auth/AuthLayout';
+import LandingPage from './pages/LandingPage';
 import Login from './components/auth/Login';
 import Register from './components/auth/Register';
 import VerifyEmail from './pages/VerifyEmail';
@@ -20,7 +21,7 @@ import ForensicYourCases from './pages/ForensicYourCases';
 function App() {
   return (
     <Routes>
-      <Route path="/" element={<Navigate to="/login" replace />} />
+      <Route path="/" element={<LandingPage />} />
 
       {/* Auth Routes with Layout */}
       <Route element={<AuthLayout />}>

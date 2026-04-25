@@ -253,8 +253,8 @@ export default function FirDetails() {
 
             <div className="mb-8">
               <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-primary/80 mb-4">Assigned Officer</p>
-              <div className="flex items-center gap-4 bg-primary/5 border border-primary/10 p-4 rounded-2xl relative">
-                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+              <div className="flex items-center gap-4 bg-police-container/20 border border-police/20 p-4 rounded-2xl relative">
+                <div className="w-12 h-12 rounded-xl bg-police-container text-police flex items-center justify-center">
                   <span className="material-symbols-outlined text-2xl">shield_person</span>
                 </div>
                 <div>
@@ -310,8 +310,8 @@ export default function FirDetails() {
 
             <div className="mb-8">
               <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-primary/80 mb-4">Assigned Forensic Expert</p>
-              <div className="flex items-center gap-4 bg-primary/5 border border-primary/10 p-4 rounded-2xl relative">
-                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+              <div className="flex items-center gap-4 bg-forensic-container/20 border border-forensic/20 p-4 rounded-2xl relative">
+                <div className="w-12 h-12 rounded-xl bg-forensic-container text-forensic flex items-center justify-center">
                   <span className="material-symbols-outlined text-2xl">science</span>
                 </div>
                 <div>

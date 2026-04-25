@@ -103,6 +103,8 @@ export default function YourCases() {
                     <th className="px-3 py-5 text-[10px] font-extrabold uppercase tracking-[0.2em] text-on-surface-variant/80">FIR Reference</th>
                     <th className="px-3 py-5 text-[10px] font-extrabold uppercase tracking-[0.2em] text-on-surface-variant/80">Citizen Info</th>
                     <th className="px-3 py-5 text-[10px] font-extrabold uppercase tracking-[0.2em] text-on-surface-variant/80">Offense</th>
+                    <th className="px-3 py-5 text-[10px] font-extrabold uppercase tracking-[0.2em] text-on-surface-variant/80">Officer</th>
+                    <th className="px-3 py-5 text-[10px] font-extrabold uppercase tracking-[0.2em] text-on-surface-variant/80">Forensic</th>
                     <th className="px-3 py-5 text-[10px] font-extrabold uppercase tracking-[0.2em] text-on-surface-variant/80 text-center">Status</th>
                     <th className="px-3 py-5 text-[10px] font-extrabold uppercase tracking-[0.2em] text-on-surface-variant/80 text-right">Actions</th>
                   </tr>
@@ -122,6 +124,30 @@ export default function YourCases() {
                         <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-black bg-surface-container border border-outline-variant/20 text-on-surface uppercase tracking-wide">
                           {c.crime_type}
                         </span>
+                      </td>
+                      <td className="px-3 py-5">
+                        {c.assigned_officer ? (
+                          <div className="flex items-center gap-2 truncate max-w-[100px]">
+                            <div className="w-6 h-6 rounded-lg bg-police-container text-police flex items-center justify-center shrink-0">
+                              <span className="material-symbols-outlined text-[14px]">shield_person</span>
+                            </div>
+                            <span className="text-[10px] font-bold text-on-surface truncate">{c.assigned_officer.name}</span>
+                          </div>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded bg-surface-container text-on-surface-variant/50 text-[9px] font-bold uppercase tracking-wider">Unassigned</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-5">
+                        {c.assigned_forensic ? (
+                          <div className="flex items-center gap-2 truncate max-w-[100px]">
+                            <div className="w-6 h-6 rounded-lg bg-forensic-container text-forensic flex items-center justify-center shrink-0">
+                              <span className="material-symbols-outlined text-[14px]">science</span>
+                            </div>
+                            <span className="text-[10px] font-bold text-on-surface truncate">{c.assigned_forensic.name}</span>
+                          </div>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded bg-surface-container text-on-surface-variant/50 text-[9px] font-bold uppercase tracking-wider">Unassigned</span>
+                        )}
                       </td>
                       <td className="px-3 py-5 text-center">
                         <div className="flex justify-center">

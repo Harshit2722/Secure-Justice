@@ -110,6 +110,8 @@ export default function MyCases() {
               <tr>
                 <th className="px-4 py-5 font-bold">FIR Number</th>
                 <th className="px-4 py-5 font-bold">Crime Type</th>
+                <th className="px-4 py-5 font-bold">Officer</th>
+                <th className="px-4 py-5 font-bold">Forensic</th>
                 <th className="px-4 py-5 font-bold">Status</th>
                 <th className="px-4 py-5 font-bold">Location</th>
                 <th className="px-4 py-5 font-bold text-right">Action</th>
@@ -120,6 +122,30 @@ export default function MyCases() {
                 <tr key={c._id} className="hover:bg-surface-container/50 transition-colors">
                   <td className="px-4 py-4 font-bold text-on-surface truncate max-w-[120px]">{c.fir_number}</td>
                   <td className="px-4 py-4 text-sm font-medium text-on-surface-variant truncate max-w-[120px]">{c.crime_type}</td>
+                  <td className="px-4 py-4">
+                    {c.assigned_officer ? (
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-lg bg-police-container text-police flex items-center justify-center shrink-0">
+                          <span className="material-symbols-outlined text-[14px]">shield_person</span>
+                        </div>
+                        <span className="text-[10px] font-bold text-on-surface truncate max-w-[80px]">{c.assigned_officer.name}</span>
+                      </div>
+                    ) : (
+                      <span className="text-[9px] text-on-surface-variant/40 font-bold uppercase tracking-widest">Pending</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-4">
+                    {c.assigned_forensic ? (
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-lg bg-forensic-container text-forensic flex items-center justify-center shrink-0">
+                          <span className="material-symbols-outlined text-[14px]">science</span>
+                        </div>
+                        <span className="text-[10px] font-bold text-on-surface truncate max-w-[80px]">{c.assigned_forensic.name}</span>
+                      </div>
+                    ) : (
+                      <span className="text-[9px] text-on-surface-variant/40 font-bold uppercase tracking-widest">Pending</span>
+                    )}
+                  </td>
                   <td className="px-4 py-4">
                     <div className={`inline-flex items-center gap-1 py-0.5 px-2 rounded-full text-[10px] font-black uppercase tracking-widest ${
                       c.status === 'closed' ? 'bg-red-100 text-red-700' :
