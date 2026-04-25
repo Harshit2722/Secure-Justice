@@ -13,6 +13,9 @@ import EvidenceDetails from './pages/EvidenceDetails';
 import PolicePortal from './pages/PolicePortal';
 import PoliceActiveCases from './pages/PoliceActiveCases';
 import YourCases from './pages/YourCases';
+import ForensicPortal from './pages/ForensicPortal';
+import ForensicActiveCases from './pages/ForensicActiveCases';
+import ForensicYourCases from './pages/ForensicYourCases';
 
 function App() {
   return (
@@ -39,6 +42,9 @@ function App() {
         <Route path="/settings" element={<Settings />} />
         <Route path="/documents" element={<Documents />} />
         <Route path="/documents/:firId" element={<EvidenceDetails />} />
+        <Route path="/forensics" element={<ForensicPortal />} />
+        <Route path="/forensic-active-cases" element={<ForensicActiveCases />} />
+        <Route path="/forensic-your-cases" element={<ForensicYourCases />} />
       </Route>
     </Routes>
   );

@@ -20,8 +20,9 @@ export default function PortalLayout() {
     setUser(parsedUser);
 
     // Initial redirect based on role if on generic /dashboard
-    if (location.pathname === '/dashboard' && parsedUser.role === 'police') {
-      navigate('/police-dashboard');
+    if (location.pathname === '/dashboard') {
+      if (parsedUser.role === 'police') navigate('/police-dashboard');
+      if (parsedUser.role === 'forensic') navigate('/forensics');
     }
   }, [navigate, location.pathname]);
 
@@ -48,8 +49,24 @@ export default function PortalLayout() {
     { name: 'Settings', path: '/settings', icon: 'settings' }
   ];
 
+  const forensicNavItems = [
+    { name: 'Forensic Hub', path: '/forensics', icon: 'dashboard' },
+    { name: 'Active Cases', path: '/forensic-active-cases', icon: 'list_alt' },
+    { name: 'My Cases', path: '/forensic-your-cases', icon: 'assignment' },
+    { name: 'Documents', path: '/documents', icon: 'folder' },
+    { name: 'Settings', path: '/settings', icon: 'settings' }
+  ];
 
-  const navItems = user.role === 'police' ? policeNavItems : citizenNavItems;
+  let navItems = citizenNavItems;
+  let dashboardPath = '/dashboard';
+  if (user.role === 'police') {
+    navItems = policeNavItems;
+    dashboardPath = '/police-dashboard';
+  }
+  if (user.role === 'forensic') {
+    navItems = forensicNavItems;
+    dashboardPath = '/forensics';
+  }
 
   const notifications = [
     { id: 1, title: 'Welcome', message: 'Welcome to SecureJustice Portal', time: 'Just now', unread: true },
@@ -59,10 +76,10 @@ export default function PortalLayout() {
     <div className="flex h-screen bg-surface overflow-hidden text-on-surface">
       {/* Sidebar */}
       <aside className="w-64 bg-surface-container-lowest border-r border-outline-variant/20 flex flex-col shadow-sm z-10">
-        <div className="h-20 flex items-center px-8 border-b border-outline-variant/10">
+        <Link to={dashboardPath} className="h-20 flex items-center px-8 border-b border-outline-variant/10 transition-colors">
           <span className="material-symbols-outlined text-primary text-3xl mr-3">balance</span>
           <h1 className="text-xl font-extrabold tracking-tight text-on-surface">Secure<span className="text-primary">Justice</span></h1>
-        </div>
+        </Link>
 
         <nav className="flex-1 py-8 px-4 space-y-2 overflow-y-auto">
           {navItems.map((item) => (
@@ -81,15 +98,15 @@ export default function PortalLayout() {
         </nav>
 
         <div className="p-4 border-t border-outline-variant/10">
-          <div className="flex items-center gap-3 p-3 rounded-xl bg-surface-container-low mb-4">
-            <div className="w-10 h-10 rounded-full bg-primary text-on-primary flex items-center justify-center font-bold">
+          <Link to="/settings" className="flex items-center gap-3 p-3 rounded-xl bg-surface-container-low mb-4 hover:bg-primary/5 hover:border-primary/20 border border-transparent transition-all group">
+            <div className="w-10 h-10 rounded-full bg-primary text-on-primary flex items-center justify-center font-bold group-hover:scale-105 transition-transform">
               {user.name ? user.name.charAt(0) : 'U'}
             </div>
             <div className="flex-1 overflow-hidden">
-              <p className="text-sm font-bold truncate">{user.name}</p>
+              <p className="text-sm font-bold truncate group-hover:text-primary transition-colors">{user.name}</p>
               <p className="text-xs text-on-surface-variant uppercase tracking-wider">{user.role}</p>
             </div>
-          </div>
+          </Link>
           <button
             onClick={handleLogout}
             className="w-full flex items-center justify-center gap-2 py-3 text-error hover:bg-error-container hover:text-on-error-container rounded-lg transition-colors text-sm font-bold tracking-widest uppercase"
@@ -101,9 +118,9 @@ export default function PortalLayout() {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col overflow-hidden relative">
+      <main className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
         {/* Top Header */}
-        <header className="h-20 bg-surface/80 backdrop-blur-md border-b border-outline-variant/10 flex items-center justify-between px-8 z-10 sticky top-0">
+        <header className="h-20 bg-surface/80 backdrop-blur-md border-b border-outline-variant/10 flex items-center justify-between px-4 md:px-8 z-10 sticky top-0">
           <h2 className="text-2xl font-bold tracking-tight capitalize">{user.role} Portal</h2>
           <div className="flex items-center gap-5 relative">
             <button
@@ -141,7 +158,7 @@ export default function PortalLayout() {
         </header>
 
         {/* Scrollable Content Area */}
-        <div className="flex-1 overflow-y-auto p-8 relative">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-8 relative">
           {/* Background Decoration */}
           <div className="absolute top-0 right-0 w-96 h-96 bg-primary/5 rounded-full blur-3xl -z-10 pointer-events-none transform translate-x-1/3 -translate-y-1/3"></div>
           <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-secondary/5 rounded-full blur-3xl -z-10 pointer-events-none transform -translate-x-1/2 translate-y-1/3"></div>

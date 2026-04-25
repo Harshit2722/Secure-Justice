@@ -117,6 +117,11 @@ export const getEvidenceByFir = async (firId) => {
   return response.data;
 };
 
+export const getAllEvidence = async () => {
+  const response = await api.get(`/evidence/all`);
+  return response.data;
+};
+
 // ==========================================
 // POLICE API FUNCTIONS
 // ==========================================
@@ -128,6 +133,35 @@ export const getAllFirs = async (params = {}) => {
 
 export const getPoliceStats = async () => {
   const response = await api.get('/fir/stats');
+  return response.data;
+};
+
+export const getForensicExperts = async () => {
+  const response = await api.get('/user/forensic-experts');
+  return response.data;
+};
+
+// ==========================================
+// FORENSIC API FUNCTIONS
+// ==========================================
+
+export const assignForensic = async (firId, forensicId) => {
+  const response = await api.patch(`/fir/${firId}/assign-forensic`, { forensicId });
+  return response.data;
+};
+
+export const getMyAssignedForensicCases = async (params = {}) => {
+  const response = await api.get('/fir/assigned-forensic/me', { params });
+  return response.data;
+};
+
+export const getForensicStats = async () => {
+  const response = await api.get('/evidence/stats/forensic');
+  return response.data;
+};
+
+export const analyzeEvidence = async (evidenceId, notes = '') => {
+  const response = await api.post(`/evidence/analyze/${evidenceId}`, { notes });
   return response.data;
 };
 

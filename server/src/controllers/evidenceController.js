@@ -34,6 +34,10 @@ const uploadEvidence = asyncHandler(async (req, res) => {
             if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
             throw new ApiError(403, 'Forbidden: You do not own this FIR');
         }
+        if (fir.status === 'closed') {
+            if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+            throw new ApiError(403, 'Forbidden: Cannot upload evidence to a closed case.');
+        }
     } else if (req.user.role === 'police') {
         const fir = await FIR.findById(firId);
         if (!fir) {
@@ -43,6 +47,10 @@ const uploadEvidence = asyncHandler(async (req, res) => {
         if (fir.assigned_officer?.toString() !== req.user._id.toString()) {
             if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
             throw new ApiError(403, 'Forbidden: This case is not assigned to you. You cannot upload evidence.');
+        }
+        if (fir.status === 'closed') {
+            if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+            throw new ApiError(403, 'Forbidden: Cannot upload evidence to a closed case.');
         }
     } else if (req.user.role !== 'admin') {
         if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
@@ -118,11 +126,29 @@ const getEvidenceByFir = asyncHandler(async (req, res) => {
     });
 });
 
+// @desc    Get all evidence (for Forensics queue)
+// @route   GET /api/evidence/all
+// @access  Private (Forensic, Police, Admin)
+const getAllEvidence = asyncHandler(async (req, res) => {
+    const evidenceList = await Evidence.find({})
+        .populate('fir')
+        .populate('uploaded_by', 'name role')
+        .populate('analyzed_by', 'name role')
+        .sort({ createdAt: -1 });
+
+    res.status(200).json({
+        success: true,
+        count: evidenceList.length,
+        data: evidenceList
+    });
+});
+
 // @desc    Forensic analysis of evidence (recalculate hash, generate PDF)
 // @route   POST /api/evidence/analyze/:evidenceId
 // @access  Private (Forensic)
 const analyzeEvidence = asyncHandler(async (req, res) => {
     const { evidenceId } = req.params;
+    const { notes } = req.body || {};
 
     const evidence = await Evidence.findById(evidenceId).populate({
         path: 'fir',
@@ -131,6 +157,23 @@ const analyzeEvidence = asyncHandler(async (req, res) => {
 
     if (!evidence) {
         throw new ApiError(404, 'Evidence not found');
+    }
+
+    if (!evidence.fir) {
+        throw new ApiError(404, 'Associated FIR not found');
+    }
+
+    // Role-Based Access Control: Only the assigned forensic expert can analyze
+    if (!evidence.fir.assigned_forensic || evidence.fir.assigned_forensic.toString() !== req.user._id.toString()) {
+        throw new ApiError(403, 'Access Denied. You can only analyze evidence for cases you are officially assigned to.');
+    }
+
+    if (evidence.fir.status !== 'under_investigation') {
+        throw new ApiError(403, 'Analysis Denied. Evidence can only be analyzed when the FIR status is "under_investigation".');
+    }
+
+    if (evidence.status !== 'Pending') {
+        throw new ApiError(400, 'Analysis Denied. This evidence has already been analyzed and a forensic report has been finalized.');
     }
 
     // Download file from Cloudinary to recalculate hash
@@ -215,6 +258,13 @@ const analyzeEvidence = asyncHandler(async (req, res) => {
         doc.fillColor('red').text('VERDICT: TAMPERED (COMPROMISED)', { align: 'center' });
     }
     
+    if (notes && notes.trim().length > 0) {
+        doc.moveDown(2);
+        doc.fillColor('black').fontSize(14).font('Helvetica-Bold').text('EXAMINER NOTES');
+        doc.moveDown(0.5);
+        doc.fontSize(11).font('Helvetica').text(notes);
+    }
+    
     // Reset color & finalize
     doc.fillColor('black');
     doc.end();
@@ -291,9 +341,34 @@ const downloadEvidencePdf = asyncHandler(async (req, res) => {
     res.send(buffer);
 });
 
+// @desc    Get forensic statistics for dashboard
+// @route   GET /api/evidence/stats/forensic
+// @access  Private (Forensic)
+const getForensicStats = asyncHandler(async (req, res) => {
+    // We only get stats for cases assigned to this expert, or global if they want global.
+    // Let's provide global stats or specific stats. Here we provide global evidence stats.
+    const statusStats = await Evidence.aggregate([
+      { $group: { _id: "$status", count: { $sum: 1 } } }
+    ]);
+
+    const typeStats = await Evidence.aggregate([
+      { $group: { _id: "$file_type", count: { $sum: 1 } } }
+    ]);
+
+    res.status(200).json({
+        success: true,
+        data: {
+            statusStats,
+            typeStats
+        }
+    });
+});
+
 module.exports = {
     uploadEvidence,
     getEvidenceByFir,
+    getAllEvidence,
     analyzeEvidence,
-    downloadEvidencePdf
+    downloadEvidencePdf,
+    getForensicStats
 };

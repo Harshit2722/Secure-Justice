@@ -5,6 +5,7 @@ const {
   updateUserProfile,
   deleteUser,
   getPoliceOfficers,
+  getForensicExperts,
 } = require("../controllers/userController");
 const { authenticate, authorizeRoles } = require("../middleware/auth.middleware");
 
@@ -16,5 +17,8 @@ router.delete("/:id", authenticate, authorizeRoles("admin"), deleteUser);
 
 // Get all police officers (admin only)
 router.get("/officers", authenticate, authorizeRoles("admin"), getPoliceOfficers);
+
+// Get all forensic experts (admin only)
+router.get("/forensic-experts", authenticate, authorizeRoles("admin"), getForensicExperts);
 
 module.exports = router;

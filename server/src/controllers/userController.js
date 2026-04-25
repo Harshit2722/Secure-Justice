@@ -87,3 +87,11 @@ exports.getPoliceOfficers = asyncHandler(async (req, res) => {
     data: officers
   });
 });
+
+exports.getForensicExperts = asyncHandler(async (req, res) => {
+  const experts = await User.find({ role: 'forensic' }).select("name email role");
+  res.status(200).json({
+    success: true,
+    data: experts
+  });
+});

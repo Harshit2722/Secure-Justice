@@ -104,41 +104,43 @@ export default function MyCases() {
       </div>
 
       <div className="bg-surface-container-lowest border border-outline-variant/20 shadow-sm rounded-3xl overflow-hidden">
-        <div className="overflow-x-auto">
+        <div className="w-full">
           <table className="w-full text-left">
             <thead className="bg-surface-container-low text-xs uppercase tracking-widest text-on-surface-variant border-b border-outline-variant/10">
               <tr>
-                <th className="px-6 py-5 font-bold">FIR Number</th>
-                <th className="px-6 py-5 font-bold">Crime Type</th>
-                <th className="px-6 py-5 font-bold">Status</th>
-                <th className="px-6 py-5 font-bold">Location</th>
-                <th className="px-6 py-5 font-bold">Action</th>
+                <th className="px-4 py-5 font-bold">FIR Number</th>
+                <th className="px-4 py-5 font-bold">Crime Type</th>
+                <th className="px-4 py-5 font-bold">Status</th>
+                <th className="px-4 py-5 font-bold">Location</th>
+                <th className="px-4 py-5 font-bold text-right">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-outline-variant/10">
               {currentCases.map((c) => (
                 <tr key={c._id} className="hover:bg-surface-container/50 transition-colors">
-                  <td className="px-6 py-4 font-bold text-on-surface">{c.fir_number}</td>
-                  <td className="px-6 py-4 text-sm font-medium text-on-surface-variant">{c.crime_type}</td>
-                  <td className="px-6 py-4">
-                    <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase ${
+                  <td className="px-4 py-4 font-bold text-on-surface truncate max-w-[120px]">{c.fir_number}</td>
+                  <td className="px-4 py-4 text-sm font-medium text-on-surface-variant truncate max-w-[120px]">{c.crime_type}</td>
+                  <td className="px-4 py-4">
+                    <div className={`inline-flex items-center gap-1 py-0.5 px-2 rounded-full text-[10px] font-black uppercase tracking-widest ${
                       c.status === 'closed' ? 'bg-red-100 text-red-700' :
                       c.status === 'verified' ? 'bg-emerald-100 text-emerald-700' :
+                      c.status === 'under_investigation' ? 'bg-blue-100 text-blue-700' :
                       c.status === 'pending' ? 'bg-amber-100 text-amber-700' :
                       'bg-primary-container text-primary-dim'
                     }`}>
-                      <span className={`w-1.5 h-1.5 rounded-full ${
+                      <span className={`w-1 h-1 rounded-full ${
                         c.status === 'closed' ? 'bg-red-500' :
                         c.status === 'verified' ? 'bg-emerald-500' :
+                        c.status === 'under_investigation' ? 'bg-blue-500' :
                         c.status === 'pending' ? 'bg-amber-500' :
                         'bg-primary'
                       }`}></span>
-                      <span>{c.status}</span>
+                      <span>{c.status?.replace('_', ' ')}</span>
                     </div>
                   </td>
-                  <td className="px-6 py-4 text-sm text-on-surface-variant">{c.location}</td>
-                  <td className="px-6 py-4 text-sm font-medium">
-                    <button onClick={() => navigate(`/cases/${c._id}`)} className="text-primary hover:text-primary/80 transition-colors font-bold tracking-wide">View Details</button>
+                  <td className="px-4 py-4 text-sm text-on-surface-variant truncate max-w-[120px]">{c.location}</td>
+                  <td className="px-4 py-4 text-sm font-medium text-right">
+                    <button onClick={() => navigate(`/cases/${c._id}`)} className="bg-primary/10 text-primary px-3 py-1 rounded-lg hover:bg-primary hover:text-on-primary transition-colors font-bold text-[10px] uppercase tracking-wide">View</button>
                   </td>
                 </tr>
               ))}

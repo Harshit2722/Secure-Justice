@@ -1,653 +1,522 @@
 const FIR = require("../models/FIR");
 const mongoose = require("mongoose");
 const User = require("../models/User");
+const asyncHandler = require("../utils/asyncHandler");
+const ApiError = require("../utils/apiError");
+const Evidence = require("../models/Evidence");
 
 // ==============================
 // CREATE FIR
 // ==============================
-exports.createFIR = async (req, res) => {
-  try {
-    const { complaint_text, crime_type, location } = req.body;
+exports.createFIR = asyncHandler(async (req, res) => {
+  const { complaint_text, crime_type, location } = req.body;
 
-    const citizen = req.user.id;
+  const citizen = req.user.id;
 
-    if (!complaint_text || !crime_type || !location) {
-      return res.status(400).json({
-        success: false,
-        message: "All fields are required",
-      });
-    }
-
-    // Prevent duplicate FIR
-    const existingFIR = await FIR.findOne({
-      citizen,
-      complaint_text: {
-        $regex: `^${complaint_text.trim()}$`,
-        $options: "i",
-      },
-      location: {
-        $regex: `^${location.trim()}$`,
-        $options: "i",
-      },
-      crime_type: {
-        $regex: `^${crime_type}$`,
-        $options: "i",
-      },
-    });
-
-    if (existingFIR) {
-      return res.status(400).json({
-        success: false,
-        message: "Duplicate FIR detected",
-      });
-    }
-
-    // Generate FIR number
-    const count = await FIR.countDocuments();
-    const firNumber = `FIR-${new Date().getFullYear()}-${String(
-      count + 1
-    ).padStart(6, "0")}`;
-
-    const fir = await FIR.create({
-      fir_number: firNumber,
-      citizen,
-      complaint_text,
-      crime_type,
-      location,
-      status_history: [{ status: "pending" }],
-    });
-
-    await fir.populate("citizen", "name email role");
-
-    return res.status(201).json({
-      success: true,
-      message: "FIR filed successfully",
-      data: fir,
-    });
-  } catch (error) {
-    console.error("Create FIR Error:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Server Error",
-    });
+  if (!complaint_text || !crime_type || !location) {
+    throw new ApiError(400, "All fields are required");
   }
-};
+
+  // Prevent duplicate FIR
+  const existingFIR = await FIR.findOne({
+    citizen,
+    complaint_text: {
+      $regex: `^${complaint_text.trim()}$`,
+      $options: "i",
+    },
+    location: {
+      $regex: `^${location.trim()}$`,
+      $options: "i",
+    },
+    crime_type: {
+      $regex: `^${crime_type}$`,
+      $options: "i",
+    },
+  });
+
+  if (existingFIR) {
+    throw new ApiError(400, "Duplicate FIR detected");
+  }
+
+  // Generate FIR number
+  const count = await FIR.countDocuments();
+  const firNumber = `FIR-${new Date().getFullYear()}-${String(
+    count + 1
+  ).padStart(6, "0")}`;
+
+  const fir = await FIR.create({
+    fir_number: firNumber,
+    citizen,
+    complaint_text,
+    crime_type,
+    location,
+    status_history: [{ status: "pending" }],
+  });
+
+  await fir.populate("citizen", "name email role");
+
+  return res.status(201).json({
+    success: true,
+    message: "FIR filed successfully",
+    data: fir,
+  });
+});
 
 // ==============================
 // GET FIR BY NUMBER
 // ==============================
-exports.getFIRByNumber = async (req, res) => {
-  try {
-    const { firNumber } = req.params;
+exports.getFIRByNumber = asyncHandler(async (req, res) => {
+  const { firNumber } = req.params;
 
-    const fir = await FIR.findOne({ fir_number: firNumber }).populate(
-      "citizen",
-      "name email role"
-    ).populate("assigned_officer", "name email role");
+  const fir = await FIR.findOne({ fir_number: firNumber })
+    .populate("citizen", "name email role")
+    .populate("assigned_officer", "name email role");
 
-    if (!fir) {
-      return res.status(404).json({
-        success: false,
-        message: "FIR not found",
-      });
-    }
-
-    return res.status(200).json({
-      success: true,
-      data: fir,
-    });
-  } catch (error) {
-    console.error("Get FIR By Number Error:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Server Error",
-    });
+  if (!fir) {
+    throw new ApiError(404, "FIR not found");
   }
-};
+
+  return res.status(200).json({
+    success: true,
+    data: fir,
+  });
+});
 
 // ==============================
 // GET ALL FIRs
 // Role-based access: Citizens see only their FIRs, Police see all
 // ==============================
-exports.getAllFIRs = async (req, res) => {
-  try {
-    const { status, crime_type, search, location, complaint_text } =
-      req.query;
+exports.getAllFIRs = asyncHandler(async (req, res) => {
+  const { status, crime_type, search, location, complaint_text } = req.query;
 
-    let filter = {};
+  let filter = {};
 
-    // Role-based access control
-    if (req.user.role === "citizen") {
-      filter.citizen = req.user.id;
-    }
-    // Police can view all FIRs (no role-based filter)
-
-    if (status) {
-      filter.status = {
-        $regex: `^${status}$`,
-        $options: "i",
-      };
-    }
-
-    if (crime_type) {
-      filter.crime_type = {
-        $regex: `^${crime_type}$`,
-        $options: "i",
-      };
-    }
-
-    if (location) {
-      filter.location = {
-        $regex: location,
-        $options: "i",
-      };
-    }
-
-    if (complaint_text) {
-      filter.complaint_text = {
-        $regex: complaint_text,
-        $options: "i",
-      };
-    }
-
-    // Global search
-    if (search) {
-      filter.$or = [
-        { complaint_text: { $regex: search, $options: "i" } },
-        { location: { $regex: search, $options: "i" } },
-        { crime_type: { $regex: search, $options: "i" } },
-      ];
-    }
-
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
-
-    const firs = await FIR.find(filter)
-      .sort({ createdAt: -1 })
-      .skip((page - 1) * limit)
-      .limit(limit)
-      .populate("citizen", "name email")
-      .populate("assigned_officer", "name email");
-
-    const total = await FIR.countDocuments(filter);
-
-    return res.status(200).json({
-      success: true,
-      total,
-      page,
-      pages: Math.ceil(total / limit) || 1,
-      data: firs,
-    });
-  } catch (error) {
-    console.error("Get All FIRs Error:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Server Error",
-    });
+  // Role-based access control
+  if (req.user.role === "citizen") {
+    filter.citizen = req.user.id;
   }
-};
+  // Police can view all FIRs (no role-based filter)
+
+  if (status) {
+    filter.status = {
+      $regex: `^${status}$`,
+      $options: "i",
+    };
+  }
+
+  if (crime_type) {
+    filter.crime_type = {
+      $regex: `^${crime_type}$`,
+      $options: "i",
+    };
+  }
+
+  if (location) {
+    filter.location = {
+      $regex: location,
+      $options: "i",
+    };
+  }
+
+  if (complaint_text) {
+    filter.complaint_text = {
+      $regex: complaint_text,
+      $options: "i",
+    };
+  }
+
+  // Global search
+  if (search) {
+    filter.$or = [
+      { complaint_text: { $regex: search, $options: "i" } },
+      { location: { $regex: search, $options: "i" } },
+      { crime_type: { $regex: search, $options: "i" } },
+    ];
+  }
+
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+
+  const firs = await FIR.find(filter)
+    .sort({ createdAt: -1 })
+    .skip((page - 1) * limit)
+    .limit(limit)
+    .populate("citizen", "name email")
+    .populate("assigned_officer", "name email")
+    .populate("assigned_forensic", "name email");
+
+  const total = await FIR.countDocuments(filter);
+
+  return res.status(200).json({
+    success: true,
+    total,
+    page,
+    pages: Math.ceil(total / limit) || 1,
+    data: firs,
+  });
+});
 
 // ==============================
 // GET POLICE STATS
 // ==============================
-exports.getPoliceStats = async (req, res) => {
-  try {
-    const statusStats = await FIR.aggregate([
-      { $group: { _id: "$status", count: { $sum: 1 } } }
-    ]);
+exports.getPoliceStats = asyncHandler(async (req, res) => {
+  const statusStats = await FIR.aggregate([
+    { $group: { _id: "$status", count: { $sum: 1 } } },
+  ]);
 
-    const crimeTypeStats = await FIR.aggregate([
-      { $group: { _id: "$crime_type", count: { $sum: 1 } } }
-    ]);
+  const crimeTypeStats = await FIR.aggregate([
+    { $group: { _id: "$crime_type", count: { $sum: 1 } } },
+  ]);
 
-    return res.status(200).json({
-      success: true,
-      data: {
-        statusStats,
-        crimeTypeStats
-      }
-    });
-  } catch (error) {
-    console.error("Get Police Stats Error:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Server Error",
-    });
-  }
-};
+  return res.status(200).json({
+    success: true,
+    data: {
+      statusStats,
+      crimeTypeStats,
+    },
+  });
+});
 
 // ==============================
 // GET FIRs BY USER
 // ==============================
-exports.getFIRsByUser = async (req, res) => {
-  try {
-    const citizen = req.user._id;
+exports.getFIRsByUser = asyncHandler(async (req, res) => {
+  const citizen = req.user._id;
 
-    const firs = await FIR.find({ citizen }).populate("citizen", "name email");
+  const firs = await FIR.find({ citizen }).populate("citizen", "name email");
 
-    return res.status(200).json({
-      success: true,
-      count: firs.length,
-      data: firs,
-    });
-  } catch (error) {
-    console.error("Get FIRs By User Error:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Server Error",
-    });
-  }
-};
+  return res.status(200).json({
+    success: true,
+    count: firs.length,
+    data: firs,
+  });
+});
 
 // ==============================
 // GET FIR BY ID
 // ==============================
-exports.getFIRById = async (req, res) => {
-  try {
-    const { id } = req.params;
+exports.getFIRById = asyncHandler(async (req, res) => {
+  const { id } = req.params;
 
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid FIR ID",
-      });
-    }
-
-    const fir = await FIR.findById(id)
-      .populate("citizen", "name email role")
-      .populate("assigned_officer", "name email role");
-
-    if (!fir) {
-      return res.status(404).json({
-        success: false,
-        message: "FIR not found",
-      });
-    }
-
-    return res.status(200).json({
-      success: true,
-      data: fir,
-    });
-  } catch (error) {
-    console.error("Get FIR By ID Error:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Server Error",
-    });
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    throw new ApiError(400, "Invalid FIR ID");
   }
-};
+
+  const fir = await FIR.findById(id)
+    .populate("citizen", "name email role")
+    .populate("assigned_officer", "name email role")
+    .populate("assigned_forensic", "name email role");
+
+  if (!fir) {
+    throw new ApiError(404, "FIR not found");
+  }
+
+  return res.status(200).json({
+    success: true,
+    data: fir,
+  });
+});
 
 // ==============================
 // UPDATE FIR DETAILS
 // ==============================
-exports.updateFIR = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const updates = req.body;
+exports.updateFIR = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const updates = req.body;
 
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid FIR ID",
-      });
-    }
-
-    if (!updates || Object.keys(updates).length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: "No update data provided",
-      });
-    }
-
-    delete updates.status;
-    delete updates.citizen;
-
-    const fir = await FIR.findById(id);
-
-    if (!fir) {
-      return res.status(404).json({
-        success: false,
-        message: "FIR not found",
-      });
-    }
-
-    if (fir.citizen.toString() !== req.user.id) {
-      return res.status(403).json({
-        success: false,
-        message: "You can only update your own FIRs",
-      });
-    }
-
-    if (fir.status !== "pending") {
-      return res.status(400).json({
-        success: false,
-        message: "Cannot edit FIR after verification",
-      });
-    }
-
-    Object.assign(fir, updates);
-    await fir.save();
-
-    await fir.populate("citizen", "name email role");
-    await fir.populate("assigned_officer", "name email role");
-
-    return res.status(200).json({
-      success: true,
-      message: "FIR updated successfully",
-      data: fir,
-    });
-  } catch (error) {
-    console.error("Update FIR Error:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Server Error",
-    });
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    throw new ApiError(400, "Invalid FIR ID");
   }
-};
+
+  if (!updates || Object.keys(updates).length === 0) {
+    throw new ApiError(400, "No update data provided");
+  }
+
+  delete updates.status;
+  delete updates.citizen;
+
+  const fir = await FIR.findById(id);
+
+  if (!fir) {
+    throw new ApiError(404, "FIR not found");
+  }
+
+  if (fir.citizen.toString() !== req.user.id) {
+    throw new ApiError(403, "You can only update your own FIRs");
+  }
+
+  if (fir.status !== "pending") {
+    throw new ApiError(400, "Cannot edit FIR after verification");
+  }
+
+  Object.assign(fir, updates);
+  await fir.save();
+
+  await fir.populate("citizen", "name email role");
+  await fir.populate("assigned_officer", "name email role");
+
+  return res.status(200).json({
+    success: true,
+    message: "FIR updated successfully",
+    data: fir,
+  });
+});
 
 // ==============================
 // UPDATE FIR STATUS
 // ==============================
-exports.updateFIRStatus = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { status } = req.body;
+exports.updateFIRStatus = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
 
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid FIR ID",
-      });
-    }
-
-    if (!status) {
-      return res.status(400).json({
-        success: false,
-        message: "Status is required",
-      });
-    }
-
-    const allowedStatuses = [
-      "pending",
-      "verified",
-      "under_investigation",
-      "closed",
-    ];
-
-    if (!allowedStatuses.includes(status)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid status value",
-      });
-    }
-
-    const fir = await FIR.findById(id);
-
-    if (!fir) {
-      return res.status(404).json({
-        success: false,
-        message: "FIR not found",
-      });
-    }
-
-    // RBAC Check: Only assigned officer or Admin can update status
-    if (req.user.role === "police" && fir.assigned_officer?.toString() !== req.user.id) {
-      return res.status(403).json({
-        success: false,
-        message: "This case is not assigned to you. You cannot update its status.",
-      });
-    }
-
-    fir.status = status;
-    fir.status_history.push({ status, updated_by: req.user.id });
-
-    await fir.save();
-    
-    await fir.populate("citizen", "name email role");
-    await fir.populate("assigned_officer", "name email role");
-
-    return res.status(200).json({
-      success: true,
-      message: "FIR status updated",
-      data: fir,
-    });
-  } catch (error) {
-    console.error("Update FIR Status Error:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Server Error",
-    });
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    throw new ApiError(400, "Invalid FIR ID");
   }
-};
 
-// ==============================
-// ASSIGN OFFICER (Admin Only)
-// ==============================
-exports.assignOfficer = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { officerId } = req.body;
-
-    if (req.user.role !== "admin") {
-      return res.status(403).json({
-        success: false,
-        message: "Access Denied. Only admins can assign officers.",
-      });
-    }
-
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid FIR ID",
-      });
-    }
-
-    const fir = await FIR.findById(id);
-    if (!fir) {
-      return res.status(404).json({
-        success: false,
-        message: "FIR not found",
-      });
-    }
-
-    fir.assigned_officer = officerId;
-    await fir.save();
-
-    await fir.populate("citizen", "name email role");
-    await fir.populate("assigned_officer", "name email role");
-
-    return res.status(200).json({
-      success: true,
-      message: "Officer assigned successfully",
-      data: fir,
-    });
-  } catch (error) {
-    console.error("Assign Officer Error:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Server Error",
-    });
+  if (!status) {
+    throw new ApiError(400, "Status is required");
   }
-};
+
+  const allowedStatuses = [
+    "pending",
+    "verified",
+    "under_investigation",
+    "closed",
+  ];
+
+  if (!allowedStatuses.includes(status)) {
+    throw new ApiError(400, "Invalid status value");
+  }
+
+  const fir = await FIR.findById(id);
+
+  if (!fir) {
+    throw new ApiError(404, "FIR not found");
+  }
+
+  // RBAC Check: Only assigned officer or Admin can update status
+  if (
+    req.user.role === "police" &&
+    fir.assigned_officer?.toString() !== req.user.id
+  ) {
+    throw new ApiError(
+      403,
+      "This case is not assigned to you. You cannot update its status."
+    );
+  }
+
+  // Mandatory Assignment Check for Police
+  if (req.user.role === "police") {
+    if (!fir.assigned_officer || !fir.assigned_forensic) {
+      throw new ApiError(
+        400,
+        "Procedural Guard: You cannot change the status of this FIR until both a Police Officer and a Forensic Expert have been formally assigned to the case."
+      );
+    }
+  }
+
+  if (status === "pending" && fir.status !== "pending") {
+    throw new ApiError(
+      400,
+      "Illegal Operation: Cannot revert status back to 'pending' once it has been processed."
+    );
+  }
+
+  if (
+    fir.status === "under_investigation" &&
+    status !== "closed" &&
+    status !== "under_investigation"
+  ) {
+    throw new ApiError(
+      400,
+      "Procedural Error: Cases under investigation can only be transitioned to 'closed'."
+    );
+  }
+
+  if (
+    fir.status === "closed" &&
+    status !== "under_investigation" &&
+    status !== "closed"
+  ) {
+    throw new ApiError(
+      400,
+      "Procedural Error: Closed cases can only be reopened to 'under investigation'."
+    );
+  }
+
+  // Final check: If closing the FIR, ensure ALL evidence has been analyzed
+  if (status === "closed") {
+    const unanalyzedEvidence = await Evidence.findOne({
+      fir: id,
+      status: "Pending",
+    });
+
+    if (unanalyzedEvidence) {
+      throw new ApiError(
+        400,
+        "Cannot close FIR: There are evidence items awaiting forensic analysis. All digital evidence must be verified or marked as tampered before the case can be finalized."
+      );
+    }
+  }
+
+  fir.status = status;
+  fir.status_history.push({ status, updated_by: req.user.id });
+
+  await fir.save();
+
+  await fir.populate("citizen", "name email role");
+  await fir.populate("assigned_officer", "name email role");
+
+  return res.status(200).json({
+    success: true,
+    message: "FIR status updated",
+    data: fir,
+  });
+});
+
+exports.assignOfficer = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { officerId, officer_id } = req.body;
+  const targetOfficerId = officerId || officer_id;
+
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    throw new ApiError(400, "Invalid FIR ID");
+  }
+
+  if (!targetOfficerId) {
+    throw new ApiError(400, "Officer ID is required");
+  }
+
+  if (!mongoose.Types.ObjectId.isValid(targetOfficerId)) {
+    throw new ApiError(400, "Invalid Officer ID");
+  }
+
+  // Check if officer exists and has police role
+  const officer = await User.findById(targetOfficerId);
+  if (!officer) {
+    throw new ApiError(404, "Officer not found");
+  }
+
+  if (officer.role !== "police") {
+    throw new ApiError(400, "Only police officers can be assigned to FIR");
+  }
+
+  // Find and update FIR
+  const fir = await FIR.findById(id).populate("citizen", "name email");
+  if (!fir) {
+    throw new ApiError(404, "FIR not found");
+  }
+
+  fir.assigned_officer = targetOfficerId;
+
+  // Auto-verify if both are assigned and status is pending
+  if (fir.assigned_forensic && fir.status === "pending") {
+    fir.status = "verified";
+    fir.status_history.push({ status: "verified", updated_by: req.user.id });
+  }
+
+  await fir.save();
+
+  await fir.populate("citizen", "name email role");
+  await fir.populate("assigned_officer", "name email role");
+
+  return res.status(200).json({
+    success: true,
+    message: "Officer assigned successfully.",
+    data: fir,
+  });
+});
 
 // ==============================
 // GET MY ASSIGNED CASES (Police Only)
 // ==============================
-exports.getMyAssignedFIRs = async (req, res) => {
-  try {
-    const officerId = req.user.id;
-    const { status, search } = req.query;
+exports.getMyAssignedFIRs = asyncHandler(async (req, res) => {
+  const officerId = req.user.id;
+  const { status, search } = req.query;
 
-    if (req.user.role !== "police") {
-      return res.status(403).json({
-        success: false,
-        message: "Access Denied. Only police officers can access this.",
-      });
-    }
-
-    let filter = { assigned_officer: officerId };
-
-    if (status) {
-      filter.status = {
-        $regex: `^${status}$`,
-        $options: "i",
-      };
-    }
-
-    if (search) {
-      filter.$or = [
-        { fir_number: { $regex: search, $options: "i" } },
-        { complaint_text: { $regex: search, $options: "i" } },
-        { location: { $regex: search, $options: "i" } },
-        { crime_type: { $regex: search, $options: "i" } },
-      ];
-    }
-
-    const firs = await FIR.find(filter)
-      .sort({ updatedAt: -1 })
-      .populate("citizen", "name email");
-
-    return res.status(200).json({
-      success: true,
-      count: firs.length,
-      data: firs,
-    });
-  } catch (error) {
-    console.error("Get My Assigned FIRs Error:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Server Error",
-    });
+  if (req.user.role !== "police") {
+    throw new ApiError(
+      403,
+      "Access Denied. Only police officers can access this."
+    );
   }
-};
+
+  let filter = { assigned_officer: officerId };
+
+  if (status) {
+    filter.status = {
+      $regex: `^${status}$`,
+      $options: "i",
+    };
+  }
+
+  if (search) {
+    filter.$or = [
+      { fir_number: { $regex: search, $options: "i" } },
+      { complaint_text: { $regex: search, $options: "i" } },
+      { location: { $regex: search, $options: "i" } },
+      { crime_type: { $regex: search, $options: "i" } },
+    ];
+  }
+
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+
+  const firs = await FIR.find(filter)
+    .sort({ updatedAt: -1 })
+    .skip((page - 1) * limit)
+    .limit(limit)
+    .populate("citizen", "name email");
+
+  const total = await FIR.countDocuments(filter);
+
+  return res.status(200).json({
+    success: true,
+    total,
+    page,
+    pages: Math.ceil(total / limit) || 1,
+    data: firs,
+  });
+});
 
 // ==============================
 // DELETE FIR
 // ==============================
-exports.deleteFIR = async (req, res) => {
-  try {
-    const { id } = req.params;
+exports.deleteFIR = asyncHandler(async (req, res) => {
+  const { id } = req.params;
 
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid FIR ID",
-      });
-    }
-
-    const fir = await FIR.findByIdAndDelete(id);
-
-    if (!fir) {
-      return res.status(404).json({
-        success: false,
-        message: "FIR not found",
-      });
-    }
-
-    return res.status(200).json({
-      success: true,
-      message: "FIR deleted successfully",
-    });
-  } catch (error) {
-    console.error("Delete FIR Error:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Server Error",
-    });
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    throw new ApiError(400, "Invalid FIR ID");
   }
-};
 
-// ==============================
-// ASSIGN OFFICER TO FIR
-// ==============================
-exports.assignOfficer = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { officer_id } = req.body;
+  const fir = await FIR.findByIdAndDelete(id);
 
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid FIR ID",
-      });
-    }
-
-    if (!officer_id) {
-      return res.status(400).json({
-        success: false,
-        message: "Officer ID is required",
-      });
-    }
-
-    if (!mongoose.Types.ObjectId.isValid(officer_id)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid Officer ID",
-      });
-    }
-
-    // Check if officer exists and has police role
-    const officer = await User.findById(officer_id);
-    if (!officer) {
-      return res.status(404).json({
-        success: false,
-        message: "Officer not found",
-      });
-    }
-
-    if (officer.role !== "police") {
-      return res.status(400).json({
-        success: false,
-        message: "Only police officers can be assigned to FIR",
-      });
-    }
-
-    // Find and update FIR
-    const fir = await FIR.findById(id).populate("citizen", "name email");
-    if (!fir) {
-      return res.status(404).json({
-        success: false,
-        message: "FIR not found",
-      });
-    }
-
-    fir.assigned_officer = officer_id;
-    await fir.save();
-
-    return res.status(200).json({
-      success: true,
-      message: "Officer assigned successfully.",
-      data: fir,
-    });
-  } catch (error) {
-    console.error("Assign Officer Error:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Server Error",
-    });
+  if (!fir) {
+    throw new ApiError(404, "FIR not found");
   }
-};
+
+  return res.status(200).json({
+    success: true,
+    message: "FIR deleted successfully",
+  });
+});
+
+
 
 // ==============================
 // UPDATE FIR STATUS WITH NOTIFICATIONS
 // ==============================
-exports.updateFIRStatusWithNotification = async (req, res) => {
-  try {
+exports.updateFIRStatusWithNotification = asyncHandler(
+  async (req, res) => {
     const { id } = req.params;
     const { status, notes } = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid FIR ID",
-      });
+      throw new ApiError(400, "Invalid FIR ID");
     }
 
     if (!status) {
-      return res.status(400).json({
-        success: false,
-        message: "Status is required",
-      });
+      throw new ApiError(400, "Status is required");
     }
 
     const allowedStatuses = [
@@ -658,27 +527,48 @@ exports.updateFIRStatusWithNotification = async (req, res) => {
     ];
 
     if (!allowedStatuses.includes(status)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid status value",
-      });
+      throw new ApiError(400, "Invalid status value");
     }
 
-    const fir = await FIR.findById(id).populate("citizen", "name email").populate("assigned_officer", "name email");
+    const fir = await FIR.findById(id)
+      .populate("citizen", "name email")
+      .populate("assigned_officer", "name email");
 
     if (!fir) {
-      return res.status(404).json({
-        success: false,
-        message: "FIR not found",
+      throw new ApiError(404, "FIR not found");
+    }
+
+    // Mandatory Assignment Check for Police
+    if (req.user.role === "police") {
+      if (!fir.assigned_officer || !fir.assigned_forensic) {
+        throw new ApiError(
+          400,
+          "Procedural Guard: You cannot change the status of this FIR until both a Police Officer and a Forensic Expert have been formally assigned to the case."
+        );
+      }
+    }
+
+    // Final check: If closing the FIR, ensure ALL evidence has been analyzed
+    if (status === "closed") {
+      const unanalyzedEvidence = await Evidence.findOne({
+        fir: id,
+        status: "Pending",
       });
+
+      if (unanalyzedEvidence) {
+        throw new ApiError(
+          400,
+          "Cannot close FIR: There are evidence items awaiting forensic analysis. All digital evidence must be verified or marked as tampered before the case can be finalized."
+        );
+      }
     }
 
     const oldStatus = fir.status;
     fir.status = status;
-    fir.status_history.push({ 
-      status, 
+    fir.status_history.push({
+      status,
       updated_by: req.user.id,
-      notes: notes || ""
+      notes: notes || "",
     });
 
     await fir.save();
@@ -688,11 +578,111 @@ exports.updateFIRStatusWithNotification = async (req, res) => {
       message: "FIR status updated successfully.",
       data: fir,
     });
-  } catch (error) {
-    console.error("Update FIR Status Error:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Server Error",
-    });
   }
-};
+);
+
+// ==============================
+// ASSIGN FORENSIC EXPERT (Admin Only)
+// ==============================
+exports.assignForensic = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { forensicId } = req.body;
+
+  if (req.user.role !== "admin") {
+    throw new ApiError(
+      403,
+      "Access Denied. Only admins can assign forensic experts."
+    );
+  }
+
+  if (
+    !mongoose.Types.ObjectId.isValid(id) ||
+    !mongoose.Types.ObjectId.isValid(forensicId)
+  ) {
+    throw new ApiError(400, "Invalid ID");
+  }
+
+  const fir = await FIR.findById(id);
+  if (!fir) {
+    throw new ApiError(404, "FIR not found");
+  }
+
+  const forensicExpert = await User.findById(forensicId);
+  if (!forensicExpert || forensicExpert.role !== "forensic") {
+    throw new ApiError(400, "User is not a valid forensic expert");
+  }
+
+  fir.assigned_forensic = forensicId;
+
+  // Auto-verify if both are assigned and status is pending
+  if (fir.assigned_officer && fir.status === "pending") {
+    fir.status = "verified";
+    fir.status_history.push({ status: "verified", updated_by: req.user.id });
+  }
+
+  await fir.save();
+
+  await fir.populate("citizen", "name email role");
+  await fir.populate("assigned_officer", "name email role");
+  await fir.populate("assigned_forensic", "name email role");
+
+  return res.status(200).json({
+    success: true,
+    message: "Forensic expert assigned successfully",
+    data: fir,
+  });
+});
+
+// ==============================
+// GET MY ASSIGNED FORENSIC CASES (Forensic Only)
+// ==============================
+exports.getMyAssignedForensicFIRs = asyncHandler(async (req, res) => {
+  const forensicId = req.user.id;
+  const { status, search } = req.query;
+
+  if (req.user.role !== "forensic") {
+    throw new ApiError(
+      403,
+      "Access Denied. Only forensic experts can access this."
+    );
+  }
+
+  let filter = { assigned_forensic: forensicId };
+
+  if (status) {
+    filter.status = {
+      $regex: `^${status}$`,
+      $options: "i",
+    };
+  }
+
+  if (search) {
+    filter.$or = [
+      { fir_number: { $regex: search, $options: "i" } },
+      { complaint_text: { $regex: search, $options: "i" } },
+      { location: { $regex: search, $options: "i" } },
+      { crime_type: { $regex: search, $options: "i" } },
+    ];
+  }
+
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+
+  const firs = await FIR.find(filter)
+    .sort({ updatedAt: -1 })
+    .skip((page - 1) * limit)
+    .limit(limit)
+    .populate("citizen", "name email")
+    .populate("assigned_officer", "name email")
+    .populate("assigned_forensic", "name email");
+
+  const total = await FIR.countDocuments(filter);
+
+  return res.status(200).json({
+    success: true,
+    total,
+    page,
+    pages: Math.ceil(total / limit) || 1,
+    data: firs,
+  });
+});
