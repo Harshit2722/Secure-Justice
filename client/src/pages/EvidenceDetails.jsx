@@ -161,7 +161,7 @@ export default function EvidenceDetails() {
                 <a href={item.file_url} target="_blank" rel="noopener noreferrer" className="p-3 bg-white/20 hover:bg-white/40 rounded-full text-white transition-colors backdrop-blur-sm shadow-lg" title="View File">
                   <span className="material-symbols-outlined">visibility</span>
                 </a>
-                {user.role === 'forensic' && (fir?.assigned_forensic?._id === user.id || fir?.assigned_forensic === user.id) && fir?.status === 'under_investigation' && item.status === 'Pending' && (
+                {user.role === 'forensic' && (fir?.assigned_forensic?._id === user.id || fir?.assigned_forensic === user.id) && fir?.status !== 'closed' && fir?.status !== 'pending' && item.status === 'Pending' && (
                   <button 
                     onClick={() => {
                       setSelectedEvidenceId(item._id);

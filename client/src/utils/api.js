@@ -98,6 +98,11 @@ export const updateProfile = async (profileData) => {
   return response.data;
 };
 
+export const deleteFIR = async (id) => {
+  const response = await api.delete(`/fir/${id}`);
+  return response.data;
+};
+
 export const uploadEvidence = async (firId, file, fileType, description) => {
   const formData = new FormData();
   formData.append('file', file);
@@ -186,4 +191,29 @@ export const getMyAssignedCases = async (params = {}) => {
   return response.data;
 };
 
+// ==========================================
+// ADMIN API FUNCTIONS
+// ==========================================
+
+export const getAdminStats = async () => {
+  const response = await api.get('/fir/admin/stats');
+  return response.data;
+};
+
+export const getUsers = async (params = {}) => {
+  const response = await api.get('/user/', { params });
+  return response.data;
+};
+
+export const deleteUserAccount = async (id) => {
+  const response = await api.delete(`/user/${id}`);
+  return response.data;
+};
+
+export const getUserById = async (id) => {
+  const response = await api.get(`/user/${id}`);
+  return response.data;
+};
+
 export default api;
+

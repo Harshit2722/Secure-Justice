@@ -8,6 +8,7 @@ const evidenceRoutes = require("./src/routes/evidenceRoutes");
 const userRoutes = require("./src/routes/userRoutes");
 // Fir routes
 const firRoutes = require("./src/routes/firRoutes");
+const notificationRoutes = require("./src/routes/notificationRoutes");
 const errorHandler = require("./src/middleware/error.middleware");
 
 
@@ -33,6 +34,7 @@ app.use("/api/fir", firRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api", evidenceRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 // Error handler
 app.use(errorHandler);

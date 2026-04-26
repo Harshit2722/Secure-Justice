@@ -42,6 +42,7 @@ const authorizeRoles =
     }
 
     if (!allowedRoles.includes(req.user.role)) {
+      console.error(`[AUTH ERROR] Role ${req.user.role} not allowed for ${req.method} ${req.originalUrl}. Allowed: ${allowedRoles}`);
       throw new ApiError(
         403,
         "You do not have permission to access this resource.",

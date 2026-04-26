@@ -82,7 +82,7 @@ export default function Settings() {
 
       {/* Profile Settings */}
       <div className="bg-surface-container-lowest p-8 rounded-3xl border border-outline-variant/20 shadow-sm">
-        <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
+        <h3 className="text-xl font-bold mb-6 flex items-center gap-2 text-on-surface">
           <span className="material-symbols-outlined text-primary">person</span>
           Profile Information
         </h3>
@@ -106,7 +106,7 @@ export default function Settings() {
                 type="text" 
                 value={formData.name}
                 onChange={(e) => setFormData({...formData, name: e.target.value})}
-                className="w-full bg-surface-container border border-outline-variant/40 rounded-xl p-4 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary font-medium transition-all"
+                className="w-full bg-surface-container text-on-surface border border-outline-variant/40 rounded-xl p-4 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary font-medium transition-all"
               />
             </div>
             <div>
@@ -115,13 +115,13 @@ export default function Settings() {
                 type="email" 
                 value={user?.email || 'user@example.com'}
                 disabled
-                className="w-full bg-surface-container/50 border border-outline-variant/20 rounded-xl p-4 text-on-surface-variant/60 font-medium cursor-not-allowed"
+                className="w-full bg-surface-container/50 text-on-surface-variant border border-outline-variant/20 rounded-xl p-4 opacity-60 font-medium cursor-not-allowed"
               />
             </div>
           </div>
           
           <div className="border-t border-outline-variant/10 pt-6 mt-6">
-            <h4 className="text-sm font-bold mb-4">Change Password</h4>
+            <h4 className="text-sm font-bold mb-4 text-on-surface">Change Password</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="md:col-span-2">
                 <label className="block text-[10px] font-extrabold uppercase tracking-[0.2em] text-primary/80 mb-2">Current Password</label>
@@ -130,7 +130,7 @@ export default function Settings() {
                     type={showOldPassword ? "text" : "password"} 
                     value={formData.oldPassword}
                     onChange={(e) => setFormData({...formData, oldPassword: e.target.value})}
-                    className="w-full bg-surface-container border border-outline-variant/40 rounded-xl p-4 pr-12 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary font-medium transition-all"
+                    className="w-full bg-surface-container text-on-surface border border-outline-variant/40 rounded-xl p-4 pr-12 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary font-medium transition-all placeholder:text-on-surface-variant/50"
                     placeholder="Enter current password"
                   />
                   <button 
@@ -151,7 +151,7 @@ export default function Settings() {
                     type={showPassword ? "text" : "password"} 
                     value={formData.password}
                     onChange={(e) => setFormData({...formData, password: e.target.value})}
-                    className="w-full bg-surface-container border border-outline-variant/40 rounded-xl p-4 pr-12 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary font-medium transition-all"
+                    className="w-full bg-surface-container text-on-surface border border-outline-variant/40 rounded-xl p-4 pr-12 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary font-medium transition-all placeholder:text-on-surface-variant/50"
                     placeholder="Enter new password"
                   />
                   <button 
@@ -178,7 +178,7 @@ export default function Settings() {
 
       {/* Preferences & Accessibility */}
       <div className="bg-surface-container-lowest p-8 rounded-3xl border border-outline-variant/20 shadow-sm">
-        <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
+        <h3 className="text-xl font-bold mb-6 flex items-center gap-2 text-on-surface">
           <span className="material-symbols-outlined text-primary">palette</span>
           Appearance & Accessibility
         </h3>

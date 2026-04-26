@@ -11,7 +11,10 @@ export default function PoliceActiveCases() {
   const [total, setTotal] = useState(0);
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('');
-  const [showFilterMenu, setShowFilterMenu] = useState(false);
+  const [crimeFilter, setCrimeFilter] = useState('');
+  const [activeTab, setActiveTab] = useState('all'); // 'all', 'unassigned', 'active'
+  const [showStatusMenu, setShowStatusMenu] = useState(false);
+  const [showCrimeMenu, setShowCrimeMenu] = useState(false);
   const limit = 8;
 
 
@@ -19,7 +22,15 @@ export default function PoliceActiveCases() {
   const fetchCases = async () => {
     setLoading(true);
     try {
-      const data = await getAllFirs({ page, limit, search, status });
+      let params = { page, limit, search, status, crime_type: crimeFilter };
+      
+      if (activeTab === 'unassigned') {
+        params.assigned_officer = 'null';
+      } else if (activeTab === 'active') {
+        params.status = 'under_investigation';
+      }
+
+      const data = await getAllFirs(params);
       if (data.success) {
         setCases(data.data);
         setTotalPages(data.pages);
@@ -37,7 +48,7 @@ export default function PoliceActiveCases() {
       fetchCases();
     }, 300);
     return () => clearTimeout(timer);
-  }, [page, search, status]);
+  }, [page, search, status, crimeFilter, activeTab]);
 
 
   const handleSearchChange = (e) => {
@@ -53,67 +64,119 @@ export default function PoliceActiveCases() {
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
         <div>
           <h2 className="text-3xl font-extrabold text-on-surface tracking-tight">Active Jurisdiction Cases</h2>
           <p className="text-on-surface-variant font-medium mt-1">Manage and track all First Information Reports across the department.</p>
         </div>
 
-        <div className="w-full md:w-auto flex flex-col md:flex-row gap-4 items-center">
+        <div className="w-full lg:w-auto flex flex-col md:flex-row gap-4 items-center">
           {/* Search Bar */}
-          <div className="w-full md:w-80 relative group order-1">
+          <div className="w-full md:w-[450px] relative group order-1">
             <input
               type="text"
-              placeholder="Search jurisdiction..."
-              className="w-full bg-surface-container-lowest border border-outline-variant/30 rounded-2xl p-4 pl-12 pr-12 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm group-hover:border-primary/30 transition-all font-medium"
+              placeholder="Search by ID, Location, or Name..."
+              className="w-full bg-surface-container-lowest border border-outline-variant/30 rounded-2xl p-4 pl-12 pr-12 focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/5 shadow-sm transition-all font-medium text-sm"
               value={search}
               onChange={handleSearchChange}
             />
             <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant group-focus-within:text-primary transition-colors">search</span>
-            {search && (
-              <button
-                type="button"
-                onClick={() => { setSearch(''); setPage(1); }}
-                className="absolute right-4 top-1/2 -translate-y-1/2 p-1 hover:bg-surface-container rounded-full"
-              >
-                <span className="material-symbols-outlined text-sm">close</span>
-              </button>
-            )}
           </div>
+        </div>
+      </div>
 
-          {/* Status Filter Dropdown */}
-          <div className="relative w-full md:w-auto order-2">
+      {/* Power Filters Row */}
+      <div className="flex flex-col gap-6">
+        <div className="flex items-center gap-1.5 p-1.5 bg-surface-container-lowest border border-outline-variant/10 rounded-2xl w-fit shadow-sm">
+          {[
+            { id: 'all', label: 'All Cases', icon: 'grid_view' },
+            { id: 'unassigned', label: 'Unassigned', icon: 'person_add' },
+            { id: 'active', label: 'In Progress', icon: 'dynamic_form' },
+          ].map((tab) => (
             <button
-              onClick={() => setShowFilterMenu(!showFilterMenu)}
-              className={`w-12 h-12 rounded-full transition-all flex items-center justify-center border shadow-sm ${status ? 'bg-primary text-on-primary' : 'bg-surface-container-lowest border-outline-variant/30 text-on-surface-variant hover:text-primary hover:bg-surface-container'}`}
-              title="Filter Status"
+              key={tab.id}
+              onClick={() => {
+                setActiveTab(tab.id);
+                setPage(1);
+              }}
+              className={`flex items-center gap-2.5 px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
+                activeTab === tab.id 
+                  ? 'bg-primary text-on-primary shadow-lg shadow-primary/20 scale-[1.02]' 
+                  : 'text-on-surface-variant hover:bg-surface-container hover:text-on-surface'
+              }`}
             >
-              <span className="material-symbols-outlined text-xl">filter_alt</span>
-              {status && <span className="absolute -top-1 -right-1 w-4 h-4 bg-error text-on-error rounded-full text-[8px] flex items-center justify-center border-2 border-surface font-black">!</span>}
+              <span className="material-symbols-outlined text-[18px]">{tab.icon}</span>
+              {tab.label}
             </button>
+          ))}
+        </div>
 
-            {showFilterMenu && (
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="relative">
+            <button
+              onClick={() => { setShowCrimeMenu(!showCrimeMenu); }}
+              className={`flex items-center gap-3 px-5 py-2.5 rounded-xl border text-xs font-black uppercase tracking-widest transition-all ${crimeFilter ? 'bg-primary/5 border-primary text-primary' : 'bg-surface-container-lowest border-outline-variant/20 text-on-surface-variant hover:border-primary/50'}`}
+            >
+              <span className="material-symbols-outlined text-[18px]">category</span>
+              {crimeFilter || 'Crime Category'}
+              <span className={`material-symbols-outlined text-[18px] transition-transform duration-300 ${showCrimeMenu ? 'rotate-180' : ''}`}>expand_more</span>
+            </button>
+            {showCrimeMenu && (
               <>
-                <div className="fixed inset-0 z-40" onClick={() => setShowFilterMenu(false)}></div>
-                <div className="absolute right-0 mt-3 w-56 bg-surface-container-lowest border border-outline-variant/20 rounded-2xl shadow-2xl z-50 py-2 animate-in fade-in zoom-in-95 duration-200">
-                  <p className="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-on-surface-variant/50 border-b border-outline-variant/5 mb-1">Filter Jurisdiction</p>
-                  {['', 'pending', 'verified', 'under_investigation', 'closed'].map(s => (
+                <div className="fixed inset-0 z-40" onClick={() => setShowCrimeMenu(false)}></div>
+                <div className="absolute left-0 mt-2 w-56 bg-surface-container-lowest border border-outline-variant/20 rounded-2xl shadow-2xl z-50 py-2 animate-in fade-in zoom-in-95 duration-200">
+                  {['', 'theft', 'cybercrime', 'fraud', 'violence', 'other'].map(t => (
                     <button
-                      key={s}
-                      onClick={() => { setStatus(s); setPage(1); setShowFilterMenu(false); }}
-                      className={`w-full text-left px-4 py-3 text-xs hover:bg-primary/5 transition-colors capitalize font-bold flex items-center justify-between ${status === s ? 'text-primary' : 'text-on-surface-variant'}`}
+                      key={t}
+                      onClick={() => { setCrimeFilter(t); setShowCrimeMenu(false); setPage(1); }}
+                      className={`w-full text-left px-4 py-3 text-xs hover:bg-primary/5 transition-colors capitalize font-bold flex items-center justify-between ${crimeFilter === t ? 'text-primary' : 'text-on-surface-variant'}`}
                     >
-                      {s === '' ? 'All Statuses' : s.replace('_', ' ')}
-                      {status === s && <span className="material-symbols-outlined text-sm">check_circle</span>}
+                      {t || 'All Categories'}
+                      {crimeFilter === t && <span className="material-symbols-outlined text-sm">check</span>}
                     </button>
                   ))}
                 </div>
               </>
             )}
           </div>
+
+          <div className="relative">
+            <button
+              onClick={() => { setShowStatusMenu(!showStatusMenu); }}
+              className={`flex items-center gap-3 px-5 py-2.5 rounded-xl border text-xs font-black uppercase tracking-widest transition-all ${status ? 'bg-primary/5 border-primary text-primary' : 'bg-surface-container-lowest border-outline-variant/20 text-on-surface-variant hover:border-primary/50'}`}
+            >
+              <span className="material-symbols-outlined text-[18px]">info</span>
+              {status.replace('_', ' ') || 'Case Status'}
+              <span className={`material-symbols-outlined text-[18px] transition-transform duration-300 ${showStatusMenu ? 'rotate-180' : ''}`}>expand_more</span>
+            </button>
+            {showStatusMenu && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setShowStatusMenu(false)}></div>
+                <div className="absolute left-0 mt-2 w-56 bg-surface-container-lowest border border-outline-variant/20 rounded-2xl shadow-2xl z-50 py-2 animate-in fade-in zoom-in-95 duration-200">
+                  {['', 'pending', 'verified', 'under_investigation', 'closed'].map(s => (
+                    <button
+                      key={s}
+                      onClick={() => { setStatus(s); setShowStatusMenu(false); setPage(1); }}
+                      className={`w-full text-left px-4 py-3 text-xs hover:bg-primary/5 transition-colors capitalize font-bold flex items-center justify-between ${status === s ? 'text-primary' : 'text-on-surface-variant'}`}
+                    >
+                      {s === '' ? 'All Statuses' : s.replace('_', ' ')}
+                      {status === s && <span className="material-symbols-outlined text-sm">check</span>}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+
+          {(search || status || crimeFilter || activeTab !== 'all') && (
+            <button 
+              onClick={() => { setSearch(''); setStatus(''); setCrimeFilter(''); setActiveTab('all'); setPage(1); }}
+              className="text-[10px] font-black uppercase tracking-[0.2em] text-primary hover:text-primary-dim underline underline-offset-4 ml-auto"
+            >
+              Reset Filters
+            </button>
+          )}
         </div>
-
-
       </div>
 
       <div className="bg-surface-container-lowest rounded-3xl border border-outline-variant/20 shadow-sm overflow-hidden">

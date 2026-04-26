@@ -1,4 +1,4 @@
-const User = require("../models/User"); // Adjust path based on your folder structure
+const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const asyncHandler = require("../utils/asyncHandler");
@@ -7,6 +7,7 @@ const { sendEmail } = require("../utils/emailService");
 const { generateVerificationToken, generateOTP } = require("../utils/tokenUtils");
 const { validateName } = require("../utils/validationUtils");
 const emailTemplates = require("../utils/emailTemplates");
+const { notifyAllAdmins } = require("../utils/notificationService");
 
 /**
  * @desc    Register a new user
@@ -62,7 +63,15 @@ const register = asyncHandler(async (req, res) => {
   const html = emailTemplates.verificationEmail(newUser.name, verificationLink);
   await sendEmail(email, 'Verify Your Email - Secure Justice', html);
 
-  // 10. Return success response
+  // 10. Notify all admins of the new registration
+  await notifyAllAdmins({
+    type: 'new_user',
+    title: 'New User Registered',
+    message: `New user ${newUser.name} has registered with role: ${newUser.role}.`,
+    link: '/admin-users',
+  });
+
+  // 11. Return success response
   res.status(201).json({
     success: true,
     message: "User registered successfully. Please check your email to verify your account.",

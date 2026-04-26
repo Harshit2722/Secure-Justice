@@ -1,4 +1,5 @@
 const crypto = require('crypto');
+const { createNotification, notifyAllAdmins } = require('../utils/notificationService');
 const fs = require('fs');
 const path = require('path');
 const Evidence = require('../models/Evidence');
@@ -85,6 +86,60 @@ const uploadEvidence = asyncHandler(async (req, res) => {
             description: description || ''
         });
 
+        // Fire notifications based on who uploaded
+        try {
+            const firForNotif = await FIR.findById(firId)
+                .populate('citizen', '_id')
+                .populate('assigned_officer', '_id')
+                .populate('assigned_forensic', '_id');
+
+            if (firForNotif) {
+                if (req.user.role === 'citizen') {
+                    // Notify assigned police officer
+                    if (firForNotif.assigned_officer) {
+                        await createNotification({
+                            recipient: firForNotif.assigned_officer._id,
+                            type: 'evidence_uploaded',
+                            title: 'New Evidence Uploaded',
+                            message: `Citizen uploaded new evidence to case ${firForNotif.fir_number}. Review it in the case file.`,
+                            link: `/documents/${firId}`,
+                        });
+                    }
+                    // Notify assigned forensic expert
+                    if (firForNotif.assigned_forensic) {
+                        await createNotification({
+                            recipient: firForNotif.assigned_forensic._id,
+                            type: 'evidence_uploaded',
+                            title: 'Evidence Pending Analysis',
+                            message: `New evidence is pending your forensic analysis in case ${firForNotif.fir_number}.`,
+                            link: `/documents/${firId}`,
+                        });
+                    }
+                } else if (req.user.role === 'police') {
+                    // Notify citizen
+                    await createNotification({
+                        recipient: firForNotif.citizen._id,
+                        type: 'evidence_uploaded',
+                        title: 'New Evidence Added to Your Case',
+                        message: `Your assigned officer has uploaded new evidence to your case ${firForNotif.fir_number}.`,
+                        link: `/documents/${firId}`,
+                    });
+                    // Notify assigned forensic expert
+                    if (firForNotif.assigned_forensic) {
+                        await createNotification({
+                            recipient: firForNotif.assigned_forensic._id,
+                            type: 'evidence_uploaded',
+                            title: 'Evidence Pending Analysis',
+                            message: `New evidence is pending your forensic analysis in case ${firForNotif.fir_number}.`,
+                            link: `/documents/${firId}`,
+                        });
+                    }
+                }
+            }
+        } catch (notifErr) {
+            console.error('[NotificationService] Evidence upload notification failed:', notifErr.message);
+        }
+
         res.status(201).json({
             success: true,
             data: newEvidence
@@ -168,8 +223,8 @@ const analyzeEvidence = asyncHandler(async (req, res) => {
         throw new ApiError(403, 'Access Denied. You can only analyze evidence for cases you are officially assigned to.');
     }
 
-    if (evidence.fir.status !== 'under_investigation') {
-        throw new ApiError(403, 'Analysis Denied. Evidence can only be analyzed when the FIR status is "under_investigation".');
+    if (evidence.fir.status === 'closed' || evidence.fir.status === 'pending') {
+        throw new ApiError(403, 'Analysis Denied. Evidence cannot be analyzed for pending or closed cases.');
     }
 
     if (evidence.status !== 'Pending') {
@@ -285,6 +340,46 @@ const analyzeEvidence = asyncHandler(async (req, res) => {
     evidence.analyzed_by = req.user._id;
 
     await evidence.save();
+
+    // Fire notifications
+    try {
+        const firForNotif = await FIR.findById(evidence.fir._id || evidence.fir)
+            .populate('citizen', '_id')
+            .populate('assigned_officer', '_id');
+        if (firForNotif) {
+            const firNumber = evidence.fir.fir_number || firForNotif.fir_number;
+            const verdict = isIntact ? 'Verified' : 'Tampered';
+            // Notify citizen
+            await createNotification({
+                recipient: firForNotif.citizen._id,
+                type: 'evidence_verified',
+                title: 'Forensic Analysis Complete',
+                message: `Forensic analysis complete for evidence in your case ${firNumber} — verdict: ${verdict}.`,
+                link: `/documents/${firForNotif._id}`,
+            });
+            // Notify assigned officer
+            if (firForNotif.assigned_officer) {
+                await createNotification({
+                    recipient: firForNotif.assigned_officer._id,
+                    type: 'evidence_verified',
+                    title: 'Forensic Report Ready',
+                    message: `Forensic report ready for evidence in your case ${firNumber} — verdict: ${verdict}.`,
+                    link: `/documents/${firForNotif._id}`,
+                });
+            }
+            // If tampered, alert all admins
+            if (!isIntact) {
+                await notifyAllAdmins({
+                    type: 'tampered_alert',
+                    title: '⚠️ Tampered Evidence Detected',
+                    message: `Evidence in case ${firNumber} has been flagged as TAMPERED by forensics.`,
+                    link: '/admin-assignments',
+                });
+            }
+        }
+    } catch (notifErr) {
+        console.error('[NotificationService] Analysis notification failed:', notifErr.message);
+    }
 
     res.status(200).json({
         success: true,
