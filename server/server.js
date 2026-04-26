@@ -14,12 +14,20 @@ const errorHandler = require("./src/middleware/error.middleware");
 
 const app = express();
  
-app.use(express.json());
-
+// Add this to create uploads folder if it doesn't exist
+const fs = require('fs');
+const dir = './uploads';
+if (!fs.existsSync(dir)){
+    fs.mkdirSync(dir);
+}
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: process.env.FRONTEND_URL || "*",
+  credentials: true
+}));
 app.use(express.json());
+app.use('/uploads', express.static('uploads'));
 
 
 // Connect to MongoDB
