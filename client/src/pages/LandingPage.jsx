@@ -194,7 +194,7 @@ export default function LandingPage() {
       </main>
 
       {/* Footer */}
-      <footer className="w-full bg-[#0f172a] border-t border-white/5 py-6">
+      <footer className="relative z-10 w-full bg-[#0f172a] border-t border-white/5 py-6">
         <div className="flex flex-col md:flex-row justify-between items-center px-6 md:px-12 w-full gap-4">
           <div className="font-bold text-slate-400 text-xs tracking-widest uppercase">
             SecureJustice
