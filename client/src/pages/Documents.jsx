@@ -16,22 +16,32 @@ export default function Documents() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-  const [showFilterMenu, setShowFilterMenu] = useState(false);
+  const [crimeFilter, setCrimeFilter] = useState('');
+  const [integrityFilter, setIntegrityFilter] = useState('all'); // 'all', 'verified', 'tampered'
+  const [activeTab, setActiveTab] = useState('all'); // 'all', 'recent', 'priority', 'tampered'
+  const [showStatusMenu, setShowStatusMenu] = useState(false);
+  const [showCrimeMenu, setShowCrimeMenu] = useState(false);
 
   useEffect(() => {
     const fetchCases = async () => {
       try {
+        let params = { search: searchTerm, status: statusFilter, crime_type: crimeFilter };
+        
+        if (activeTab === 'recent') {
+          // Sort by newest is default usually, but we could add a date filter
+        } else if (activeTab === 'priority') {
+          // Violence and Cybercrime as priority
+          params.crime_type = 'violence'; 
+        }
+
         let data;
         if (user.role === 'police') {
-          // Officers see only their assigned cases' documents (Server-side filtered)
-          data = await getMyAssignedCases({ search: searchTerm, status: statusFilter });
+          data = await getMyAssignedCases(params);
         } else if (user.role === 'forensic') {
-          // Forensic experts see only their assigned cases' documents
           const { getMyAssignedForensicCases } = await import('../utils/api');
-          data = await getMyAssignedForensicCases({ search: searchTerm, status: statusFilter });
+          data = await getMyAssignedForensicCases(params);
         } else {
-          // Admins see everything, Citizens see their own (handled by backend)
-          data = await getAllFirs({ search: searchTerm, status: statusFilter });
+          data = await getAllFirs(params);
         }
         
         if (data.success) {
@@ -48,7 +58,7 @@ export default function Documents() {
       fetchCases();
     }, 300);
     return () => clearTimeout(timer);
-  }, [searchTerm, statusFilter, user.role]);
+  }, [searchTerm, statusFilter, crimeFilter, activeTab, user.role]);
 
 
   if (loading) {
@@ -64,87 +74,136 @@ export default function Documents() {
 
   return (
     <div className="space-y-8 animate-in fade-in">
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+      <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
         <div>
-          <h2 className="text-3xl font-extrabold text-on-surface">Evidence Vault</h2>
-          <p className="text-on-surface-variant mt-1">Manage and view all supporting documents grouped by case.</p>
+          <h2 className="text-3xl font-extrabold text-on-surface tracking-tight">Evidence Vault</h2>
+          <p className="text-on-surface-variant font-medium">Manage and view all supporting documents grouped by case.</p>
         </div>
 
-        <div className="flex items-center gap-3 w-full md:w-auto">
+        <div className="flex items-center gap-3 w-full lg:w-auto">
           {/* Search Bar */}
-          <div className="relative flex-1 md:w-80 group">
+          <div className="relative flex-1 md:w-[450px] group">
             <input
               type="text"
-              placeholder="Search vault..."
-              className="w-full bg-surface-container-lowest border border-outline-variant/30 rounded-2xl py-4 pl-12 pr-4 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm text-base transition-all font-medium"
+              placeholder="Search by case number, location, or description..."
+              className="w-full bg-surface-container-lowest border border-outline-variant/30 rounded-2xl py-4 pl-12 pr-4 focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/5 shadow-sm text-sm transition-all font-medium"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
-            <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant text-xl">search</span>
+            <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant/50 group-focus-within:text-primary transition-colors">search</span>
           </div>
+        </div>
+      </div>
 
-          {/* Status Filter Dropdown */}
+      {/* Power Filters Row */}
+      <div className="flex flex-col gap-6">
+        <div className="flex items-center gap-1.5 p-1.5 bg-surface-container-lowest border border-outline-variant/10 rounded-2xl w-fit shadow-sm">
+          {[
+            { id: 'all', label: 'All Evidence', icon: 'folder_copy' },
+            { id: 'recent', label: 'Recent Files', icon: 'schedule' },
+            { id: 'priority', label: 'Critical Cases', icon: 'emergency' },
+            { id: 'tampered', label: 'Tampered Alerts', icon: 'warning_amber' },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => {
+                setActiveTab(tab.id);
+                if (tab.id === 'priority') setCrimeFilter('violence');
+                else if (tab.id === 'tampered') setIntegrityFilter('tampered');
+                else { setCrimeFilter(''); setIntegrityFilter('all'); }
+              }}
+              className={`flex items-center gap-2.5 px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all relative ${
+                activeTab === tab.id 
+                  ? tab.id === 'tampered' ? 'bg-error text-on-error shadow-lg shadow-error/20 scale-[1.02]' : 'bg-primary text-on-primary shadow-lg shadow-primary/20 scale-[1.02]' 
+                  : 'text-on-surface-variant hover:bg-surface-container hover:text-on-surface'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[18px]">{tab.icon}</span>
+              {tab.label}
+              {tab.id === 'tampered' && cases.some(c => c.has_tampered_evidence) && (
+                <span className="absolute -top-1 -right-1 w-3 h-3 bg-error rounded-full border-2 border-surface animate-ping"></span>
+              )}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-4">
+          {/* Crime Category */}
           <div className="relative">
             <button
-              onClick={() => { setShowFilterMenu(!showFilterMenu); }}
-              className={`w-14 h-14 rounded-full transition-all flex items-center justify-center border shadow-sm ${statusFilter ? 'bg-primary text-on-primary' : 'bg-surface-container-lowest border-outline-variant/30 text-on-surface-variant hover:text-primary hover:bg-surface-container'}`}
-              title="Filter by Status"
+              onClick={() => { setShowCrimeMenu(!showCrimeMenu); }}
+              className={`flex items-center gap-3 px-5 py-2.5 rounded-xl border text-xs font-black uppercase tracking-widest transition-all ${crimeFilter ? 'bg-primary/5 border-primary text-primary' : 'bg-surface-container-lowest border-outline-variant/20 text-on-surface-variant hover:border-primary/50'}`}
             >
-              <span className="material-symbols-outlined text-2xl">filter_alt</span>
+              <span className="material-symbols-outlined text-[18px]">category</span>
+              {crimeFilter || 'Crime Category'}
+              <span className={`material-symbols-outlined text-[18px] transition-transform duration-300 ${showCrimeMenu ? 'rotate-180' : ''}`}>expand_more</span>
             </button>
 
-            {showFilterMenu && (
+            {showCrimeMenu && (
               <>
-                <div className="fixed inset-0 z-40" onClick={() => setShowFilterMenu(false)}></div>
-                <div className="absolute right-0 mt-2 w-48 bg-surface-container-lowest border border-outline-variant/20 rounded-2xl shadow-2xl z-50 py-2 animate-in fade-in zoom-in-95 duration-200">
-                  <p className="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-on-surface-variant/50 border-b border-outline-variant/5 mb-1">Filter Status</p>
-                  {['', 'pending', 'verified', 'under_investigation', 'closed'].map(s => (
+                <div className="fixed inset-0 z-40" onClick={() => setShowCrimeMenu(false)}></div>
+                <div className="absolute left-0 mt-2 w-56 bg-surface-container-lowest border border-outline-variant/20 rounded-2xl shadow-2xl z-50 py-2 animate-in fade-in zoom-in-95 duration-200">
+                  {['', 'theft', 'cybercrime', 'fraud', 'violence', 'other'].map(t => (
                     <button
-                      key={s}
-                      onClick={() => { setStatusFilter(s); setShowFilterMenu(false); }}
-                      className={`w-full text-left px-4 py-2.5 text-xs hover:bg-primary/5 transition-colors capitalize font-bold flex items-center justify-between ${statusFilter === s ? 'text-primary' : 'text-on-surface-variant'}`}
+                      key={t}
+                      onClick={() => { setCrimeFilter(t); setShowCrimeMenu(false); setActiveTab('all'); }}
+                      className={`w-full text-left px-4 py-3 text-xs hover:bg-primary/5 transition-colors capitalize font-bold flex items-center justify-between ${crimeFilter === t ? 'text-primary' : 'text-on-surface-variant'}`}
                     >
-                      {s === '' ? 'All Reports' : s.replace('_', ' ')}
-                      {statusFilter === s && <span className="material-symbols-outlined text-sm">check_circle</span>}
+                      {t || 'All Categories'}
+                      {crimeFilter === t && <span className="material-symbols-outlined text-sm">check</span>}
                     </button>
                   ))}
                 </div>
               </>
             )}
           </div>
+
+          {/* Integrity Status */}
+          <div className="relative">
+            <button
+              onClick={() => { setShowStatusMenu(!showStatusMenu); }}
+              className={`flex items-center gap-3 px-5 py-2.5 rounded-xl border text-xs font-black uppercase tracking-widest transition-all ${integrityFilter !== 'all' ? 'bg-error/5 border-error text-error' : 'bg-surface-container-lowest border-outline-variant/20 text-on-surface-variant hover:border-primary/50'}`}
+            >
+              <span className="material-symbols-outlined text-[18px]">{integrityFilter === 'tampered' ? 'gpp_bad' : 'gpp_good'}</span>
+              {integrityFilter === 'all' ? 'Integrity Status' : integrityFilter}
+              <span className={`material-symbols-outlined text-[18px] transition-transform duration-300 ${showStatusMenu ? 'rotate-180' : ''}`}>expand_more</span>
+            </button>
+
+            {showStatusMenu && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setShowStatusMenu(false)}></div>
+                <div className="absolute left-0 mt-2 w-56 bg-surface-container-lowest border border-outline-variant/20 rounded-2xl shadow-2xl z-50 py-2 animate-in fade-in zoom-in-95 duration-200">
+                  {['all', 'verified', 'tampered'].map(s => (
+                    <button
+                      key={s}
+                      onClick={() => { setIntegrityFilter(s); setShowStatusMenu(false); if(s === 'tampered') setActiveTab('tampered'); }}
+                      className={`w-full text-left px-4 py-3 text-xs hover:bg-primary/5 transition-colors capitalize font-bold flex items-center justify-between ${integrityFilter === s ? 'text-primary' : 'text-on-surface-variant'}`}
+                    >
+                      {s === 'all' ? 'All Records' : s}
+                      {integrityFilter === s && <span className="material-symbols-outlined text-sm">check</span>}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+
+          {(searchTerm || statusFilter || crimeFilter || integrityFilter !== 'all') && (
+            <button 
+              onClick={() => { setSearchTerm(''); setStatusFilter(''); setCrimeFilter(''); setIntegrityFilter('all'); setActiveTab('all'); }}
+              className="text-[10px] font-black uppercase tracking-[0.2em] text-primary hover:text-primary-dim underline underline-offset-4 ml-auto"
+            >
+              Reset Filters
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Active Filters Tag Cloud */}
-      {(statusFilter || searchTerm) && (
-        <div className="flex flex-wrap gap-2 animate-in fade-in slide-in-from-left-4">
-          {statusFilter && (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-primary/10 text-primary border border-primary/20">
-              Status: {statusFilter.replace('_', ' ')}
-              <button onClick={() => setStatusFilter('')} className="hover:text-primary-dim transition-colors">
-                <span className="material-symbols-outlined text-xs">close</span>
-              </button>
-            </span>
-          )}
-          {searchTerm && (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-primary/10 text-primary border border-primary/20">
-              Search: {searchTerm}
-              <button onClick={() => setSearchTerm('')} className="hover:text-primary-dim transition-colors">
-                <span className="material-symbols-outlined text-xs">close</span>
-              </button>
-            </span>
-          )}
-          <button
-            onClick={() => { setStatusFilter(''); setSearchTerm(''); }}
-            className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant hover:text-primary transition-colors ml-2 underline underline-offset-4"
-          >
-            Clear All
-          </button>
-        </div>
-      )}
-
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {cases.map((c) => {
+        {cases.filter(c => {
+          if (integrityFilter === 'tampered') return c.has_tampered_evidence;
+          return true;
+        }).map((c) => {
           const theme = CRIME_THEMES[c.crime_type?.toLowerCase()] || CRIME_THEMES.other;
           return (
             <Link 
@@ -156,11 +215,25 @@ export default function Documents() {
               
               <div className="relative z-10">
                 <div className="flex justify-between items-start mb-5">
-                  <span className="text-[11px] font-black text-primary uppercase tracking-[0.15em] bg-primary/10 px-3 py-1.5 rounded-xl border border-primary/20">
-                    #{c.fir_number}
-                  </span>
-                  <div className="w-10 h-10 rounded-xl bg-surface-container text-on-surface-variant flex items-center justify-center group-hover:bg-primary group-hover:text-on-primary transition-all duration-300">
-                    <span className="material-symbols-outlined text-xl">folder</span>
+                  <div className="flex flex-col gap-2">
+                    <span className="text-[11px] font-black text-primary uppercase tracking-[0.15em] bg-primary/10 px-3 py-1.5 rounded-xl border border-primary/20 w-fit">
+                      {c.fir_number}
+                    </span>
+                    {c.has_tampered_evidence && (
+                      <span className="inline-flex items-center gap-1.5 text-[9px] font-black text-error uppercase tracking-widest bg-error/10 px-2 py-1 rounded-lg border border-error/20 animate-pulse">
+                        <span className="material-symbols-outlined text-[14px]">warning</span>
+                        Tampered Evidence
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="text-right">
+                      <p className="text-[10px] font-black text-on-surface-variant/40 uppercase tracking-widest">Files</p>
+                      <p className="text-sm font-black text-on-surface">{c.evidence_count || 0}</p>
+                    </div>
+                    <div className="w-10 h-10 rounded-xl bg-surface-container flex items-center justify-center text-on-surface-variant group-hover:bg-primary group-hover:text-on-primary transition-all shadow-sm">
+                      <span className="material-symbols-outlined">folder</span>
+                    </div>
                   </div>
                 </div>
                 

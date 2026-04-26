@@ -34,7 +34,7 @@ const upload = multer({ storage: storage });
 
 // Evidence routes
 router.post('/evidence/upload/:firId', authenticate, authorizeRoles("citizen", "police"), upload.single('file'), uploadEvidence);
-router.get('/evidence/fir/:firId', authenticate, authorizeRoles("lawyer", "police", "court", "forensic", "citizen"), getEvidenceByFir);
+router.get('/evidence/fir/:firId', authenticate, authorizeRoles("lawyer", "police", "court", "forensic", "citizen", "admin"), getEvidenceByFir);
 router.get('/evidence/all', authenticate, authorizeRoles("forensic", "police", "admin", "court"), getAllEvidence);
 
 // Forensics stats

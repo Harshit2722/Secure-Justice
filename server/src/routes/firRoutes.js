@@ -15,7 +15,8 @@ const {
   getMyAssignedFIRs,
   getMyAssignedForensicFIRs,
   updateFIRStatusWithNotification,
-  assignForensic
+  assignForensic,
+  getAdminStats
 } = require("../controllers/firController");
 
 const { authenticate, authorizeRoles } = require("../middleware/auth.middleware");
@@ -30,8 +31,11 @@ router.get("/stats", authenticate, authorizeRoles("police"), getPoliceStats);
 // Create FIR → logged-in citizen
 router.post("/", authenticate, authorizeRoles("citizen"), createFIR);
 
+// Get Admin Stats → admin only (Move above generic routes)
+router.get("/admin/stats", authenticate, authorizeRoles("admin"), getAdminStats);
+
 // Get all FIRs → police dashboard
-router.get("/", authenticate, authorizeRoles("police", "citizen", "forensic"), getAllFIRs);
+router.get("/", authenticate, authorizeRoles("police", "citizen", "forensic", "admin"), getAllFIRs);
 
 // Get FIRs by user → citizen's own FIRs
 router.get("/my-firs", authenticate, authorizeRoles("citizen"), getFIRsByUser);
@@ -46,7 +50,7 @@ router.get("/:id", authenticate, getFIRById);
 router.patch("/:id", authenticate, authorizeRoles("citizen"), updateFIR);
 
 // Update FIR status → police only
-router.patch("/:id/status", authenticate, authorizeRoles("police"), updateFIRStatus);
+router.patch("/:id/status", authenticate, authorizeRoles("police", "admin"), updateFIRStatus);
 
 // Get cases assigned to current officer
 router.get("/assigned/me", authenticate, authorizeRoles("police"), getMyAssignedFIRs);
@@ -68,4 +72,4 @@ router.patch("/:id/assign-forensic", authenticate, authorizeRoles("admin"), assi
 // Delete FIR → admin only
 router.delete("/:id", authenticate, authorizeRoles("admin"), deleteFIR);
 
-module.exports = router;
+module.exports = router;

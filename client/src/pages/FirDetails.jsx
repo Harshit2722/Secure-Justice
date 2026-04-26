@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useOutletContext, useParams, useNavigate, Link } from 'react-router-dom';
-import { getCaseById, updateFirStatus, getPoliceOfficers, assignOfficer, getForensicExperts, assignForensic } from '../utils/api';
+import { getCaseById, updateFirStatus, assignOfficer, assignForensic, getUsers, deleteFIR } from '../utils/api';
+import ConfirmModal from '../components/ConfirmModal';
 
 export default function FirDetails() {
   const { user } = useOutletContext();
@@ -18,7 +19,9 @@ export default function FirDetails() {
   const [forensicExperts, setForensicExperts] = useState([]);
   const [showForensicDropdown, setShowForensicDropdown] = useState(false);
   const [statusUpdateError, setStatusUpdateError] = useState(null);
-
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [staffSearch, setStaffSearch] = useState('');
 
   useEffect(() => {
     const fetchFir = async () => {
@@ -35,25 +38,26 @@ export default function FirDetails() {
       }
     };
     fetchFir();
+  }, [id]);
 
+  const fetchStaff = async () => {
+    try {
+      const [officerData, forensicData] = await Promise.all([
+        getUsers({ role: 'police', search: staffSearch }),
+        getUsers({ role: 'forensic', search: staffSearch })
+      ]);
+      if (officerData.success) setOfficers(officerData.data);
+      if (forensicData.success) setForensicExperts(forensicData.data);
+    } catch (err) {
+      console.error("Failed to fetch staff", err);
+    }
+  };
+
+  useEffect(() => {
     if (user.role === 'admin') {
-      const fetchStaff = async () => {
-        try {
-          const officerData = await getPoliceOfficers();
-          if (officerData.success) {
-            setOfficers(officerData.data);
-          }
-          const forensicData = await getForensicExperts();
-          if (forensicData.success) {
-            setForensicExperts(forensicData.data);
-          }
-        } catch (err) {
-          console.error("Failed to fetch staff", err);
-        }
-      };
       fetchStaff();
     }
-  }, [id, user.role]);
+  }, [staffSearch, user.role]);
 
   const handleStatusUpdate = async (newStatus) => {
     if (newStatus === fir.status) {
@@ -107,6 +111,21 @@ export default function FirDetails() {
     }
   };
 
+  const handleDeleteCase = async () => {
+    try {
+      setDeleting(true);
+      const res = await deleteFIR(id);
+      if (res.success) {
+        navigate('/admin-assignments');
+      }
+    } catch (err) {
+      console.error("Delete failed", err);
+      alert("Failed to delete case.");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
 
   if (loading) {
     return <div className="animate-pulse space-y-8"><div className="h-8 bg-surface-container w-1/4 rounded"></div><div className="h-96 bg-surface-container-lowest rounded-3xl"></div></div>;
@@ -123,7 +142,15 @@ export default function FirDetails() {
   }
 
   const isAssignedOfficer = fir.assigned_officer?._id === user.id || fir.assigned_officer === user.id;
-  const canUpdate = user.role === 'admin' || isAssignedOfficer;
+  const canUpdate = isAssignedOfficer;
+  const isAdmin = user.role === 'admin';
+  const canAccessUserProfile = user.role !== 'citizen';
+
+  const navigateToUser = (userId) => {
+    if (canAccessUserProfile && userId) {
+      navigate(`/admin-users/${userId}`);
+    }
+  };
 
   return (
     <div className="space-y-8 animate-in fade-in">
@@ -133,18 +160,22 @@ export default function FirDetails() {
         </button>
         <h2 className="text-3xl font-extrabold text-on-surface">Case Details</h2>
         <div className="ml-auto flex items-center gap-3">
-          {canUpdate && (
+          {(canUpdate || isAdmin) && (
             <div className="relative">
               <button 
-                onClick={() => setShowStatusDropdown(!showStatusDropdown)}
-                disabled={updating || (user.role === 'police' && (!fir.assigned_officer || !fir.assigned_forensic))}
-                className="flex items-center gap-2 bg-primary text-on-primary px-5 py-2.5 rounded-xl font-bold transition-all shadow-md active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
-                title={user.role === 'police' && (!fir.assigned_officer || !fir.assigned_forensic) ? "Both Police and Forensic Expert must be assigned to update status" : "Update Case Status"}
+                onClick={() => !isAdmin && setShowStatusDropdown(!showStatusDropdown)}
+                disabled={updating || isAdmin || (user.role === 'police' && (!fir.assigned_officer || !fir.assigned_forensic))}
+                className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all active:scale-95 disabled:cursor-not-allowed ${
+                  isAdmin 
+                    ? 'bg-surface-container-highest/30 text-on-surface-variant/40 border border-outline-variant/10 shadow-none' 
+                    : 'bg-primary text-on-primary shadow-md active:scale-95'
+                }`}
+                title={isAdmin ? "Administrators cannot update case status directly" : user.role === 'police' && (!fir.assigned_officer || !fir.assigned_forensic) ? "Both Police and Forensic Expert must be assigned to update status" : "Update Case Status"}
               >
                 {updating ? (
                   <span className="material-symbols-outlined animate-spin text-[20px]">sync</span>
                 ) : (
-                  <span className="material-symbols-outlined text-[20px]">edit_note</span>
+                  <span className="material-symbols-outlined text-[20px]">{isAdmin ? 'lock' : 'edit_note'}</span>
                 )}
                 Update Status
               </button>
@@ -160,7 +191,6 @@ export default function FirDetails() {
                       { val: 'under_investigation', label: 'Under Investigation', icon: 'search', color: 'text-blue-500' },
                       { val: 'closed', label: 'Closed Case', icon: 'lock', color: 'text-red-500' }
                     ].map(s => {
-                      // Logic for non-selectable options
                       let isDisabled = false;
                       if (fir.status === 'under_investigation' && s.val !== 'closed' && s.val !== 'under_investigation') {
                         isDisabled = true;
@@ -168,7 +198,6 @@ export default function FirDetails() {
                       if (fir.status === 'closed' && s.val !== 'under_investigation' && s.val !== 'closed') {
                         isDisabled = true;
                       }
-                      // Also pending is always disabled once changed
                       if (fir.status !== 'pending' && s.val === 'pending') {
                         isDisabled = true;
                       }
@@ -193,18 +222,26 @@ export default function FirDetails() {
           )}
           <Link 
             to={`/documents/${fir._id}`}
-            className="flex items-center gap-2 bg-surface-container hover:bg-primary/10 text-primary px-5 py-2.5 rounded-xl font-bold transition-all border border-primary/20 shadow-sm"
+            className="flex items-center gap-2 bg-surface-container-highest hover:bg-primary/20 text-on-surface px-5 py-2.5 rounded-xl font-bold transition-all border border-outline-variant shadow-sm"
           >
             <span className="material-symbols-outlined text-[20px]">folder_open</span>
             View Evidence
           </Link>
+          {isAdmin && (
+            <button 
+              onClick={() => setConfirmDelete(true)}
+              className="flex items-center gap-2 bg-error-container text-on-error-container px-5 py-2.5 rounded-xl font-bold transition-all shadow-md active:scale-95"
+            >
+              <span className="material-symbols-outlined text-[20px]">delete</span>
+              Delete Case
+            </button>
+          )}
         </div>
 
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         
-        {/* Main Details Column */}
         <div className="lg:col-span-2 space-y-8">
           <div className="bg-surface-container-lowest p-8 rounded-3xl border border-outline-variant/20 shadow-sm">
             <div className="flex justify-between items-start mb-8">
@@ -228,8 +265,6 @@ export default function FirDetails() {
                 }`}></span>
                 {fir.status?.replace('_', ' ')}
               </span>
-
-
             </div>
 
             <div className="grid grid-cols-2 gap-8 mb-8 border-t border-b border-outline-variant/10 py-8">
@@ -253,114 +288,156 @@ export default function FirDetails() {
 
             <div className="mb-8">
               <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-primary/80 mb-4">Assigned Officer</p>
-              <div className="flex items-center gap-4 bg-police-container/20 border border-police/20 p-4 rounded-2xl relative">
+              <div 
+                onClick={() => navigateToUser(fir.assigned_officer?._id || fir.assigned_officer)}
+                className={`flex items-center gap-4 bg-police-container/10 border border-police/20 p-4 rounded-2xl relative group ${canAccessUserProfile && fir.assigned_officer ? 'cursor-pointer hover:bg-police-container/20 hover:border-police transition-all shadow-sm' : ''}`}
+              >
                 <div className="w-12 h-12 rounded-xl bg-police-container text-police flex items-center justify-center">
                   <span className="material-symbols-outlined text-2xl">shield_person</span>
                 </div>
-                <div>
-                  <p className="font-bold text-on-surface">{fir.assigned_officer?.name || 'Not Assigned'}</p>
-                  <p className="text-xs text-on-surface-variant font-medium">{fir.assigned_officer?.email || 'Awaiting officer allocation'}</p>
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-on-surface truncate">{fir.assigned_officer?.name || 'Not Assigned'}</p>
+                  <p className="text-xs text-on-surface-variant font-medium truncate">{fir.assigned_officer?.email || 'Awaiting officer allocation'}</p>
                 </div>
                 <div className="ml-auto flex items-center gap-3">
-                   {user.role === 'admin' && (
-                     <div className="relative">
-                       <button 
-                        onClick={() => setShowAssignDropdown(!showAssignDropdown)}
-                        className="p-2 hover:bg-primary/10 rounded-lg text-primary transition-colors flex items-center justify-center"
-                        title="Assign Officer"
-                       >
-                         <span className="material-symbols-outlined">{fir.assigned_officer ? 'person_search' : 'person_add'}</span>
-                       </button>
-
-                       {showAssignDropdown && (
+                  {user.role === 'admin' && (
+                    <div className="relative" onClick={(e) => e.stopPropagation()}>
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowAssignDropdown(!showAssignDropdown);
+                        }}
+                        className="flex items-center gap-1.5 bg-primary/10 hover:bg-primary text-primary hover:text-on-primary px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 shadow-sm"
+                      >
+                        <span className="material-symbols-outlined text-sm">{fir.assigned_officer ? 'edit' : 'add'}</span>
+                        {fir.assigned_officer ? 'Modify' : 'Assign'}
+                      </button>
+                      
+                      {showAssignDropdown && (
                         <>
                           <div className="fixed inset-0 z-40" onClick={() => setShowAssignDropdown(false)}></div>
-                          <div className="absolute right-0 bottom-full mb-2 w-64 bg-surface-container-lowest border border-outline-variant/20 rounded-2xl shadow-2xl z-50 py-2 animate-in fade-in slide-in-from-bottom-2 duration-200">
-                            <p className="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-on-surface-variant/50 border-b border-outline-variant/5 mb-1">Select Officer</p>
-                            <div className="max-h-48 overflow-y-auto">
-                              {officers.map(officer => (
+                          <div className="absolute right-0 bottom-full mb-2 w-72 bg-surface-container-lowest border border-outline-variant/20 rounded-2xl shadow-2xl z-50 py-2 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                            <div className="px-3 py-2 border-b border-outline-variant/10">
+                              <div className="relative">
+                                <span className="material-symbols-outlined absolute left-2 top-1/2 -translate-y-1/2 text-on-surface-variant/50 text-sm">search</span>
+                                <input 
+                                  type="text"
+                                  placeholder="Search officers..."
+                                  className="w-full pl-8 pr-3 py-1.5 bg-surface-container rounded-lg text-[10px] font-bold focus:outline-none"
+                                  value={staffSearch}
+                                  onChange={(e) => setStaffSearch(e.target.value)}
+                                />
+                              </div>
+                            </div>
+                            <div className="max-h-48 overflow-y-auto custom-scrollbar">
+                              {officers.length > 0 ? officers.map(off => (
                                 <button
-                                  key={officer._id}
-                                  onClick={() => handleAssignOfficer(officer._id)}
-                                  className={`w-full text-left px-4 py-3 text-xs hover:bg-primary/5 transition-colors font-bold flex items-center gap-3 ${fir.assigned_officer?._id === officer._id ? 'text-primary' : 'text-on-surface-variant'}`}
+                                  key={off._id}
+                                  onClick={() => {
+                                    handleAssignOfficer(off._id);
+                                    setShowAssignDropdown(false);
+                                  }}
+                                  className={`w-full text-left px-4 py-3 text-xs hover:bg-primary/5 transition-colors font-bold flex items-center gap-3 ${fir.assigned_officer?._id === off._id ? 'text-primary' : 'text-on-surface-variant'}`}
                                 >
-                                  <div className="w-6 h-6 rounded-full bg-surface-container flex items-center justify-center text-[10px]">
-                                    {officer.name.charAt(0)}
+                                  <div className="w-8 h-8 rounded-full bg-police-container/30 flex items-center justify-center text-[10px] text-police">
+                                    {off.name ? off.name.charAt(0) : '?'}
                                   </div>
                                   <div className="flex-1 overflow-hidden">
-                                    <p className="truncate">{officer.name}</p>
-                                    <p className="text-[8px] opacity-60 truncate">{officer.email}</p>
+                                    <p className="truncate">{off.name || 'Unknown Officer'}</p>
+                                    <p className="text-[8px] opacity-60 truncate">{off.email}</p>
                                   </div>
-                                  {fir.assigned_officer?._id === officer._id && <span className="material-symbols-outlined text-sm">check</span>}
+                                  {fir.assigned_officer?._id === off._id && <span className="material-symbols-outlined text-sm">check</span>}
                                 </button>
-                              ))}
-                              {officers.length === 0 && <p className="p-4 text-[10px] text-center opacity-50">No officers found</p>}
+                              )) : (
+                                <p className="px-4 py-3 text-[10px] text-on-surface-variant/50 italic text-center">No officers found</p>
+                              )}
                             </div>
                           </div>
                         </>
-                       )}
-                     </div>
-                   )}
-                   <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${fir.assigned_officer ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                      )}
+                    </div>
+                  )}
+                  <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${fir.assigned_officer ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
                     {fir.assigned_officer ? 'Active' : 'Pending'}
-                   </span>
+                  </span>
                 </div>
               </div>
             </div>
 
             <div className="mb-8">
               <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-primary/80 mb-4">Assigned Forensic Expert</p>
-              <div className="flex items-center gap-4 bg-forensic-container/20 border border-forensic/20 p-4 rounded-2xl relative">
+              <div 
+                onClick={() => navigateToUser(fir.assigned_forensic?._id || fir.assigned_forensic)}
+                className={`flex items-center gap-4 bg-forensic-container/10 border border-forensic/20 p-4 rounded-2xl relative group ${canAccessUserProfile && fir.assigned_forensic ? 'cursor-pointer hover:bg-forensic-container/20 hover:border-forensic transition-all shadow-sm' : ''}`}
+              >
                 <div className="w-12 h-12 rounded-xl bg-forensic-container text-forensic flex items-center justify-center">
                   <span className="material-symbols-outlined text-2xl">science</span>
                 </div>
-                <div>
-                  <p className="font-bold text-on-surface">{fir.assigned_forensic?.name || 'Not Assigned'}</p>
-                  <p className="text-xs text-on-surface-variant font-medium">{fir.assigned_forensic?.email || 'Awaiting forensic allocation'}</p>
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-on-surface truncate">{fir.assigned_forensic?.name || 'Not Assigned'}</p>
+                  <p className="text-xs text-on-surface-variant font-medium truncate">{fir.assigned_forensic?.email || 'Awaiting forensic allocation'}</p>
                 </div>
                 <div className="ml-auto flex items-center gap-3">
-                   {user.role === 'admin' && (
-                     <div className="relative">
-                       <button 
-                        onClick={() => setShowForensicDropdown(!showForensicDropdown)}
-                        className="p-2 hover:bg-primary/10 rounded-lg text-primary transition-colors flex items-center justify-center"
-                        title="Assign Forensic Expert"
-                       >
-                         <span className="material-symbols-outlined">{fir.assigned_forensic ? 'person_search' : 'person_add'}</span>
-                       </button>
-
-                       {showForensicDropdown && (
+                  {user.role === 'admin' && (
+                    <div className="relative" onClick={(e) => e.stopPropagation()}>
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowForensicDropdown(!showForensicDropdown);
+                        }}
+                        className="flex items-center gap-1.5 bg-primary/10 hover:bg-primary text-primary hover:text-on-primary px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 shadow-sm"
+                      >
+                        <span className="material-symbols-outlined text-sm">{fir.assigned_forensic ? 'edit' : 'add'}</span>
+                        {fir.assigned_forensic ? 'Modify' : 'Assign'}
+                      </button>
+                      
+                      {showForensicDropdown && (
                         <>
                           <div className="fixed inset-0 z-40" onClick={() => setShowForensicDropdown(false)}></div>
-                          <div className="absolute right-0 bottom-full mb-2 w-64 bg-surface-container-lowest border border-outline-variant/20 rounded-2xl shadow-2xl z-50 py-2 animate-in fade-in slide-in-from-bottom-2 duration-200">
-                            <p className="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-on-surface-variant/50 border-b border-outline-variant/5 mb-1">Select Expert</p>
-                            <div className="max-h-48 overflow-y-auto">
-                              {forensicExperts.map(expert => (
+                          <div className="absolute right-0 bottom-full mb-2 w-72 bg-surface-container-lowest border border-outline-variant/20 rounded-2xl shadow-2xl z-50 py-2 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                            <div className="px-3 py-2 border-b border-outline-variant/10">
+                              <div className="relative">
+                                <span className="material-symbols-outlined absolute left-2 top-1/2 -translate-y-1/2 text-on-surface-variant/50 text-sm">search</span>
+                                <input 
+                                  type="text"
+                                  placeholder="Search experts..."
+                                  className="w-full pl-8 pr-3 py-1.5 bg-surface-container rounded-lg text-[10px] font-bold focus:outline-none"
+                                  value={staffSearch}
+                                  onChange={(e) => setStaffSearch(e.target.value)}
+                                />
+                              </div>
+                            </div>
+                            <div className="max-h-48 overflow-y-auto custom-scrollbar">
+                              {forensicExperts.length > 0 ? forensicExperts.map(expert => (
                                 <button
                                   key={expert._id}
-                                  onClick={() => handleAssignForensic(expert._id)}
+                                  onClick={() => {
+                                    handleAssignForensic(expert._id);
+                                    setShowForensicDropdown(false);
+                                  }}
                                   className={`w-full text-left px-4 py-3 text-xs hover:bg-primary/5 transition-colors font-bold flex items-center gap-3 ${fir.assigned_forensic?._id === expert._id ? 'text-primary' : 'text-on-surface-variant'}`}
                                 >
-                                  <div className="w-6 h-6 rounded-full bg-surface-container flex items-center justify-center text-[10px]">
-                                    {expert.name.charAt(0)}
+                                  <div className="w-8 h-8 rounded-full bg-forensic-container/30 flex items-center justify-center text-[10px] text-forensic">
+                                    {expert.name ? expert.name.charAt(0) : '?'}
                                   </div>
                                   <div className="flex-1 overflow-hidden">
-                                    <p className="truncate">{expert.name}</p>
+                                    <p className="truncate">{expert.name || 'Unknown Expert'}</p>
                                     <p className="text-[8px] opacity-60 truncate">{expert.email}</p>
                                   </div>
                                   {fir.assigned_forensic?._id === expert._id && <span className="material-symbols-outlined text-sm">check</span>}
                                 </button>
-                              ))}
-                              {forensicExperts.length === 0 && <p className="p-4 text-[10px] text-center opacity-50">No forensic experts found</p>}
+                              )) : (
+                                <p className="px-4 py-3 text-[10px] text-on-surface-variant/50 italic text-center">No experts found</p>
+                              )}
                             </div>
                           </div>
                         </>
-                       )}
-                     </div>
-                   )}
-                   <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${fir.assigned_forensic ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                      )}
+                    </div>
+                  )}
+                  <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${fir.assigned_forensic ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
                     {fir.assigned_forensic ? 'Active' : 'Pending'}
-                   </span>
+                  </span>
                 </div>
               </div>
             </div>
@@ -381,14 +458,22 @@ export default function FirDetails() {
               <span className="material-symbols-outlined text-primary">person</span>
               Complainant Info
             </h3>
-            <div className="space-y-4">
-              <div>
-                <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-primary/80 mb-1">Name</p>
-                <p className="font-bold">{fir.citizen?.name || 'N/A'}</p>
+            <div 
+              onClick={() => navigateToUser(fir.citizen?._id || fir.citizen)}
+              className={`space-y-4 p-4 -m-4 rounded-2xl transition-all ${canAccessUserProfile ? 'cursor-pointer hover:bg-surface-container/50 group' : ''}`}
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-primary/80 mb-1">Name</p>
+                  <p className={`font-bold transition-colors ${canAccessUserProfile ? 'group-hover:text-primary' : ''}`}>{fir.citizen?.name || 'N/A'}</p>
+                </div>
+                {canAccessUserProfile && (
+                  <span className="material-symbols-outlined text-on-surface-variant/20 group-hover:text-primary group-hover:translate-x-1 transition-all">chevron_right</span>
+                )}
               </div>
               <div>
                 <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-primary/80 mb-1">Email</p>
-                <p className="font-bold">{fir.citizen?.email || 'N/A'}</p>
+                <p className="font-bold text-sm opacity-80">{fir.citizen?.email || 'N/A'}</p>
               </div>
             </div>
           </div>
@@ -460,6 +545,15 @@ export default function FirDetails() {
           </div>
         </div>
       )}
+
+      <ConfirmModal 
+        show={confirmDelete}
+        title="Permanently Delete Case"
+        message={`Are you sure you want to delete Case #${fir.fir_number}? All evidence, documents, and logs will be permanently removed. This action is irreversible.`}
+        confirmText={deleting ? "Deleting..." : "Delete Case"}
+        onConfirm={handleDeleteCase}
+        onCancel={() => setConfirmDelete(false)}
+      />
     </div>
   );
 }

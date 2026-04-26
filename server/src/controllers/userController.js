@@ -1,6 +1,7 @@
 const bcrypt = require("bcryptjs");
 const mongoose = require("mongoose");
 const User = require("../models/User");
+const FIR = require("../models/FIR");
 const asyncHandler = require("../utils/asyncHandler");
 const ApiError = require("../utils/apiError");
 
@@ -92,5 +93,60 @@ exports.getForensicExperts = asyncHandler(async (req, res) => {
   res.status(200).json({
     success: true,
     data: experts
+  });
+});
+
+exports.getAllUsers = asyncHandler(async (req, res) => {
+  const { role, search } = req.query;
+  let query = {};
+
+  if (role) {
+    query.role = role;
+  }
+
+  if (search) {
+    query.$or = [
+      { name: { $regex: search, $options: 'i' } },
+      { email: { $regex: search, $options: 'i' } }
+    ];
+  }
+
+  const users = await User.find(query).select("-password").sort({ createdAt: -1 });
+
+  res.status(200).json({
+    success: true,
+    count: users.length,
+    data: users
+  });
+});
+
+exports.getUserById = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    throw new ApiError(400, "Invalid user ID.");
+  }
+
+  const user = await User.findById(id).select("-password");
+  if (!user) {
+    throw new ApiError(404, "User not found.");
+  }
+
+  // Fetch associated FIRs based on role
+  let firs = [];
+  if (user.role === 'citizen') {
+    firs = await FIR.find({ citizen: id }).sort({ createdAt: -1 });
+  } else if (user.role === 'police') {
+    firs = await FIR.find({ assigned_officer: id }).sort({ createdAt: -1 });
+  } else if (user.role === 'forensic') {
+    firs = await FIR.find({ assigned_forensic: id }).sort({ createdAt: -1 });
+  }
+
+  res.status(200).json({
+    success: true,
+    data: {
+      ...user._doc,
+      firs
+    }
   });
 });

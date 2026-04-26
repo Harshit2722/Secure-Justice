@@ -4,6 +4,9 @@ const User = require("../models/User");
 const asyncHandler = require("../utils/asyncHandler");
 const ApiError = require("../utils/apiError");
 const Evidence = require("../models/Evidence");
+const { createNotification, notifyAllAdmins } = require("../utils/notificationService");
+
+const formatStatus = (s) => s.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 
 // ==============================
 // CREATE FIR
@@ -55,6 +58,22 @@ exports.createFIR = asyncHandler(async (req, res) => {
 
   await fir.populate("citizen", "name email role");
 
+  // Notify citizen — confirmation
+  await createNotification({
+    recipient: citizen,
+    type: 'fir_filed',
+    title: 'FIR Filed Successfully',
+    message: `Your FIR ${fir.fir_number} has been filed successfully and is pending review.`,
+    link: `/cases/${fir._id}`,
+  });
+  // Notify all admins — assign officers
+  await notifyAllAdmins({
+    type: 'fir_filed',
+    title: 'New FIR Filed',
+    message: `New FIR ${fir.fir_number} filed by ${fir.citizen.name} — assign a Police Officer and Forensic Expert.`,
+    link: '/admin-assignments',
+  });
+
   return res.status(201).json({
     success: true,
     message: "FIR filed successfully",
@@ -88,7 +107,7 @@ exports.getFIRByNumber = asyncHandler(async (req, res) => {
 // Role-based access: Citizens see only their FIRs, Police see all
 // ==============================
 exports.getAllFIRs = asyncHandler(async (req, res) => {
-  const { status, crime_type, search, location, complaint_text } = req.query;
+  const { status, crime_type, search, location, complaint_text, assigned_officer, assigned_forensic } = req.query;
 
   let filter = {};
 
@@ -97,6 +116,9 @@ exports.getAllFIRs = asyncHandler(async (req, res) => {
     filter.citizen = req.user.id;
   }
   // Police can view all FIRs (no role-based filter)
+
+  if (assigned_officer === 'null') filter.assigned_officer = null;
+  if (assigned_forensic === 'null') filter.assigned_forensic = null;
 
   if (status) {
     filter.status = {
@@ -370,6 +392,36 @@ exports.updateFIRStatus = asyncHandler(async (req, res) => {
   await fir.populate("assigned_officer", "name email role");
   await fir.populate("assigned_forensic", "name email role");
 
+  const statusLabel = formatStatus(status);
+  // Notify citizen
+  await createNotification({
+    recipient: fir.citizen._id,
+    type: 'status_changed',
+    title: 'Case Status Updated',
+    message: `Your FIR ${fir.fir_number} status has been updated to ${statusLabel}.`,
+    link: `/cases/${fir._id}`,
+  });
+  // Notify assigned officer
+  if (fir.assigned_officer) {
+    await createNotification({
+      recipient: fir.assigned_officer._id,
+      type: 'status_changed',
+      title: 'Case Status Updated',
+      message: `Status of your assigned case ${fir.fir_number} has changed to ${statusLabel}.`,
+      link: '/your-cases',
+    });
+  }
+  // Notify assigned forensic expert
+  if (fir.assigned_forensic) {
+    await createNotification({
+      recipient: fir.assigned_forensic._id,
+      type: 'status_changed',
+      title: 'Case Status Updated',
+      message: `Status of your assigned case ${fir.fir_number} has changed to ${statusLabel}.`,
+      link: '/forensic-your-cases',
+    });
+  }
+
   return res.status(200).json({
     success: true,
     message: "FIR status updated",
@@ -423,6 +475,23 @@ exports.assignOfficer = asyncHandler(async (req, res) => {
   await fir.populate("citizen", "name email role");
   await fir.populate("assigned_officer", "name email role");
   await fir.populate("assigned_forensic", "name email role");
+
+  // Notify citizen
+  await createNotification({
+    recipient: fir.citizen._id,
+    type: 'officer_assigned',
+    title: 'Officer Assigned to Your Case',
+    message: `A Police Officer has been assigned to your FIR ${fir.fir_number}.`,
+    link: `/cases/${fir._id}`,
+  });
+  // Notify the assigned officer
+  await createNotification({
+    recipient: targetOfficerId,
+    type: 'officer_assigned',
+    title: 'New Case Assigned to You',
+    message: `You have been assigned to case ${fir.fir_number} (${fir.crime_type} at ${fir.location}). Begin investigation.`,
+    link: '/your-cases',
+  });
 
   return res.status(200).json({
     success: true,
@@ -579,6 +648,37 @@ exports.updateFIRStatusWithNotification = asyncHandler(
 
     await fir.save();
 
+    await fir.populate("citizen", "name email role");
+    await fir.populate("assigned_officer", "name email role");
+    await fir.populate("assigned_forensic", "name email role");
+
+    const statusLabel = formatStatus(status);
+    await createNotification({
+      recipient: fir.citizen._id,
+      type: 'status_changed',
+      title: 'Case Status Updated',
+      message: `Your FIR ${fir.fir_number} status has been updated to ${statusLabel}.`,
+      link: `/cases/${fir._id}`,
+    });
+    if (fir.assigned_officer) {
+      await createNotification({
+        recipient: fir.assigned_officer._id,
+        type: 'status_changed',
+        title: 'Case Status Updated',
+        message: `Status of your assigned case ${fir.fir_number} has changed to ${statusLabel}.`,
+        link: '/your-cases',
+      });
+    }
+    if (fir.assigned_forensic) {
+      await createNotification({
+        recipient: fir.assigned_forensic._id,
+        type: 'status_changed',
+        title: 'Case Status Updated',
+        message: `Status of your assigned case ${fir.fir_number} has changed to ${statusLabel}.`,
+        link: '/forensic-your-cases',
+      });
+    }
+
     return res.status(200).json({
       success: true,
       message: "FIR status updated successfully.",
@@ -631,6 +731,23 @@ exports.assignForensic = asyncHandler(async (req, res) => {
   await fir.populate("citizen", "name email role");
   await fir.populate("assigned_officer", "name email role");
   await fir.populate("assigned_forensic", "name email role");
+
+  // Notify citizen
+  await createNotification({
+    recipient: fir.citizen._id,
+    type: 'forensic_assigned',
+    title: 'Forensic Expert Assigned',
+    message: `A Forensic Expert has been assigned to your FIR ${fir.fir_number}.`,
+    link: `/cases/${fir._id}`,
+  });
+  // Notify the forensic expert
+  await createNotification({
+    recipient: forensicId,
+    type: 'forensic_assigned',
+    title: 'New Case Assigned to You',
+    message: `You have been assigned as Forensic Expert on case ${fir.fir_number}. Await evidence for analysis.`,
+    link: '/forensic-your-cases',
+  });
 
   return res.status(200).json({
     success: true,
@@ -690,5 +807,63 @@ exports.getMyAssignedForensicFIRs = asyncHandler(async (req, res) => {
     page,
     pages: Math.ceil(total / limit) || 1,
     data: firs,
+  });
+});
+
+// ==============================
+// GET ADMIN STATS
+// ==============================
+exports.getAdminStats = asyncHandler(async (req, res) => {
+  // FIR Status Stats
+  const statusStats = await FIR.aggregate([
+    { $group: { _id: "$status", count: { $sum: 1 } } },
+  ]);
+
+  // Crime Type Stats
+  const crimeTypeStats = await FIR.aggregate([
+    { $group: { _id: "$crime_type", count: { $sum: 1 } } },
+  ]);
+
+  // User Counts by Role
+  const userRoleStats = await User.aggregate([
+    { $group: { _id: "$role", count: { $sum: 1 } } },
+  ]);
+
+  // Monthly FIR Trends (Last 6 months)
+  const sixMonthsAgo = new Date();
+  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+
+  const monthlyTrends = await FIR.aggregate([
+    {
+      $match: {
+        createdAt: { $gte: sixMonthsAgo },
+      },
+    },
+    {
+      $group: {
+        _id: {
+          year: { $year: "$createdAt" },
+          month: { $month: "$createdAt" },
+        },
+        count: { $sum: 1 },
+      },
+    },
+    { $sort: { "_id.year": 1, "_id.month": 1 } },
+  ]);
+
+  // Evidence Integrity Stats
+  const evidenceStats = await Evidence.aggregate([
+    { $group: { _id: "$status", count: { $sum: 1 } } },
+  ]);
+
+  return res.status(200).json({
+    success: true,
+    data: {
+      statusStats,
+      crimeTypeStats,
+      userRoleStats,
+      monthlyTrends,
+      evidenceStats,
+    },
   });
 });

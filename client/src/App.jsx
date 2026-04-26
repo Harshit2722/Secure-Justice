@@ -17,6 +17,10 @@ import YourCases from './pages/YourCases';
 import ForensicPortal from './pages/ForensicPortal';
 import ForensicActiveCases from './pages/ForensicActiveCases';
 import ForensicYourCases from './pages/ForensicYourCases';
+import AdminDashboard from './pages/AdminDashboard';
+import AdminAssignments from './pages/AdminAssignments';
+import AdminUsers from './pages/AdminUsers';
+import UserDetails from './pages/UserDetails';
 
 function App() {
   return (
@@ -46,6 +50,10 @@ function App() {
         <Route path="/forensics" element={<ForensicPortal />} />
         <Route path="/forensic-active-cases" element={<ForensicActiveCases />} />
         <Route path="/forensic-your-cases" element={<ForensicYourCases />} />
+        <Route path="/admin-dashboard" element={<AdminDashboard />} />
+        <Route path="/admin-assignments" element={<AdminAssignments />} />
+        <Route path="/admin-users" element={<AdminUsers />} />
+        <Route path="/admin-users/:id" element={<UserDetails />} />
       </Route>
     </Routes>
   );
