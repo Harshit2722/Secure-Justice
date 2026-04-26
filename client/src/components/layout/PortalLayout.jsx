@@ -1,5 +1,6 @@
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
+import FloatingBackground from './FloatingBackground';
 
 export default function PortalLayout() {
   const [user, setUser] = useState(null);
@@ -73,7 +74,8 @@ export default function PortalLayout() {
   ];
 
   return (
-    <div className="flex h-screen bg-surface overflow-hidden text-on-surface">
+    <div className="flex h-screen bg-surface overflow-hidden text-on-surface relative">
+      <FloatingBackground />
       {/* Sidebar */}
       <aside className="w-64 bg-surface-container-lowest border-r border-outline-variant/20 flex flex-col shadow-sm z-10">
         <Link to={dashboardPath} className="h-20 flex items-center px-8 border-b border-outline-variant/10 transition-colors">

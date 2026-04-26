@@ -313,7 +313,8 @@ export default function PolicePortal() {
                 <th className="px-6 py-4 text-[10px] font-extrabold uppercase tracking-[0.2em] text-on-surface-variant/80">FIR Number</th>
                 <th className="px-6 py-4 text-[10px] font-extrabold uppercase tracking-[0.2em] text-on-surface-variant/80">Citizen</th>
                 <th className="px-6 py-4 text-[10px] font-extrabold uppercase tracking-[0.2em] text-on-surface-variant/80">Crime Type</th>
-                <th className="px-6 py-4 text-[10px] font-extrabold uppercase tracking-[0.2em] text-on-surface-variant/80">Location</th>
+                <th className="px-6 py-4 text-[10px] font-extrabold uppercase tracking-[0.2em] text-on-surface-variant/80">Officer</th>
+                <th className="px-6 py-4 text-[10px] font-extrabold uppercase tracking-[0.2em] text-on-surface-variant/80">Forensic</th>
                 <th className="px-6 py-4 text-[10px] font-extrabold uppercase tracking-[0.2em] text-on-surface-variant/80">Status</th>
                 <th className="px-6 py-4 text-[10px] font-extrabold uppercase tracking-[0.2em] text-on-surface-variant/80 text-right">Action</th>
               </tr>
@@ -332,6 +333,30 @@ export default function PolicePortal() {
                     </span>
                   </td>
                   <td className="px-6 py-5 text-sm font-medium text-on-surface-variant">{c.location}</td>
+                  <td className="px-6 py-5">
+                    {c.assigned_officer ? (
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-lg bg-police-container text-police flex items-center justify-center shrink-0">
+                          <span className="material-symbols-outlined text-[14px]">shield_person</span>
+                        </div>
+                        <span className="text-[10px] font-bold text-on-surface truncate max-w-[80px]">{c.assigned_officer.name}</span>
+                      </div>
+                    ) : (
+                      <span className="text-[9px] text-on-surface-variant/40 font-bold uppercase tracking-widest">Unassigned</span>
+                    )}
+                  </td>
+                  <td className="px-6 py-5">
+                    {c.assigned_forensic ? (
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-lg bg-forensic-container text-forensic flex items-center justify-center shrink-0">
+                          <span className="material-symbols-outlined text-[14px]">science</span>
+                        </div>
+                        <span className="text-[10px] font-bold text-on-surface truncate max-w-[80px]">{c.assigned_forensic.name}</span>
+                      </div>
+                    ) : (
+                      <span className="text-[9px] text-on-surface-variant/40 font-bold uppercase tracking-widest">Unassigned</span>
+                    )}
+                  </td>
                   <td className="px-6 py-5">
                         <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${
                           c.status === 'closed' ? 'bg-red-100 text-red-700' :

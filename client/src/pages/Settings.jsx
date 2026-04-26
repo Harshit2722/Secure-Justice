@@ -131,8 +131,7 @@ export default function Settings() {
                     value={formData.oldPassword}
                     onChange={(e) => setFormData({...formData, oldPassword: e.target.value})}
                     className="w-full bg-surface-container border border-outline-variant/40 rounded-xl p-4 pr-12 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary font-medium transition-all"
-                    placeholder="Enter current password to save changes"
-                    required
+                    placeholder="Enter current password"
                   />
                   <button 
                     type="button"
@@ -153,7 +152,7 @@ export default function Settings() {
                     value={formData.password}
                     onChange={(e) => setFormData({...formData, password: e.target.value})}
                     className="w-full bg-surface-container border border-outline-variant/40 rounded-xl p-4 pr-12 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary font-medium transition-all"
-                    placeholder="Enter new password (optional)"
+                    placeholder="Enter new password"
                   />
                   <button 
                     type="button"

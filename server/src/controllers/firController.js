@@ -70,7 +70,8 @@ exports.getFIRByNumber = asyncHandler(async (req, res) => {
 
   const fir = await FIR.findOne({ fir_number: firNumber })
     .populate("citizen", "name email role")
-    .populate("assigned_officer", "name email role");
+    .populate("assigned_officer", "name email role")
+    .populate("assigned_forensic", "name email role");
 
   if (!fir) {
     throw new ApiError(404, "FIR not found");
@@ -254,6 +255,7 @@ exports.updateFIR = asyncHandler(async (req, res) => {
 
   await fir.populate("citizen", "name email role");
   await fir.populate("assigned_officer", "name email role");
+  await fir.populate("assigned_forensic", "name email role");
 
   return res.status(200).json({
     success: true,
@@ -366,6 +368,7 @@ exports.updateFIRStatus = asyncHandler(async (req, res) => {
 
   await fir.populate("citizen", "name email role");
   await fir.populate("assigned_officer", "name email role");
+  await fir.populate("assigned_forensic", "name email role");
 
   return res.status(200).json({
     success: true,
@@ -419,6 +422,7 @@ exports.assignOfficer = asyncHandler(async (req, res) => {
 
   await fir.populate("citizen", "name email role");
   await fir.populate("assigned_officer", "name email role");
+  await fir.populate("assigned_forensic", "name email role");
 
   return res.status(200).json({
     success: true,
@@ -466,7 +470,9 @@ exports.getMyAssignedFIRs = asyncHandler(async (req, res) => {
     .sort({ updatedAt: -1 })
     .skip((page - 1) * limit)
     .limit(limit)
-    .populate("citizen", "name email");
+    .populate("citizen", "name email role")
+    .populate("assigned_officer", "name email role")
+    .populate("assigned_forensic", "name email role");
 
   const total = await FIR.countDocuments(filter);
 
