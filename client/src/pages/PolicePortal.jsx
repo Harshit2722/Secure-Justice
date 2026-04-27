@@ -57,6 +57,28 @@ const CustomPieTooltip = ({ active, payload }) => {
 };
 
 
+const CustomizedAxisTick = (props) => {
+  const { x, y, payload } = props;
+  const words = payload.value.replace(/_/g, ' ').split(' ');
+  return (
+    <g transform={`translate(${x},${y})`}>
+      {words.map((word, index) => (
+        <text 
+          key={index} 
+          x={0} 
+          y={16 + (index * 12)} 
+          textAnchor="middle" 
+          fill="#64748b" 
+          fontSize={10} 
+          fontWeight={700}
+        >
+          {word}
+        </text>
+      ))}
+    </g>
+  );
+};
+
 export default function PolicePortal() {
   const { user } = useOutletContext();
 
@@ -148,15 +170,15 @@ export default function PolicePortal() {
             <ResponsiveContainer width="100%" height="100%">
               <BarChart 
                 data={statusData} 
-                margin={{ top: 30, right: 30, left: 0, bottom: 0 }}
+                margin={{ top: 30, right: 30, left: 0, bottom: 40 }}
               >
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                 <XAxis
                   dataKey="name"
                   axisLine={false}
                   tickLine={false}
-                  tick={{ fill: '#64748b', fontSize: 12, fontWeight: 600 }}
-                  dy={10}
+                  tick={<CustomizedAxisTick />}
+                  interval={0}
                 />
                 <YAxis
                   axisLine={false}
@@ -313,6 +335,7 @@ export default function PolicePortal() {
                 <th className="px-6 py-4 text-[10px] font-extrabold uppercase tracking-[0.2em] text-on-surface-variant/80">FIR Number</th>
                 <th className="px-6 py-4 text-[10px] font-extrabold uppercase tracking-[0.2em] text-on-surface-variant/80">Citizen</th>
                 <th className="px-6 py-4 text-[10px] font-extrabold uppercase tracking-[0.2em] text-on-surface-variant/80">Crime Type</th>
+                <th className="px-6 py-4 text-[10px] font-extrabold uppercase tracking-[0.2em] text-on-surface-variant/80">Location</th>
                 <th className="px-6 py-4 text-[10px] font-extrabold uppercase tracking-[0.2em] text-on-surface-variant/80">Officer</th>
                 <th className="px-6 py-4 text-[10px] font-extrabold uppercase tracking-[0.2em] text-on-surface-variant/80">Forensic</th>
                 <th className="px-6 py-4 text-[10px] font-extrabold uppercase tracking-[0.2em] text-on-surface-variant/80">Status</th>
@@ -339,7 +362,7 @@ export default function PolicePortal() {
                         <div className="w-6 h-6 rounded-lg bg-police-container text-police flex items-center justify-center shrink-0">
                           <span className="material-symbols-outlined text-[14px]">shield_person</span>
                         </div>
-                        <span className="text-[10px] font-bold text-on-surface truncate max-w-[80px]">{c.assigned_officer.name}</span>
+                        <span className="text-[10px] font-bold text-on-surface">{c.assigned_officer.name}</span>
                       </div>
                     ) : (
                       <span className="text-[9px] text-on-surface-variant/40 font-bold uppercase tracking-widest">Unassigned</span>
@@ -351,7 +374,7 @@ export default function PolicePortal() {
                         <div className="w-6 h-6 rounded-lg bg-forensic-container text-forensic flex items-center justify-center shrink-0">
                           <span className="material-symbols-outlined text-[14px]">science</span>
                         </div>
-                        <span className="text-[10px] font-bold text-on-surface truncate max-w-[80px]">{c.assigned_forensic.name}</span>
+                        <span className="text-[10px] font-bold text-on-surface">{c.assigned_forensic.name}</span>
                       </div>
                     ) : (
                       <span className="text-[9px] text-on-surface-variant/40 font-bold uppercase tracking-widest">Unassigned</span>

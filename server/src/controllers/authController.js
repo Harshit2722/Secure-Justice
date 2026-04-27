@@ -127,7 +127,7 @@ const login = asyncHandler(async (req, res) => {
       id: user._id,
       role: user.role,
     };
-    const token = jwt.sign(payload, process.env.JWT_SECRET);
+    const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '7d' });
 
     return res.status(200).json({
       success: true,
@@ -228,7 +228,7 @@ const verifyOTP = asyncHandler(async (req, res) => {
     id: user._id,
     role: user.role,
   };
-  const token = jwt.sign(payload, process.env.JWT_SECRET);
+  const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '7d' });
 
   res.status(200).json({
     success: true,

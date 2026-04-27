@@ -12,6 +12,8 @@ export default function AdminUsers() {
   const [showRoleDropdown, setShowRoleDropdown] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState({ show: false, id: null });
   const [deletingId, setDeletingId] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const usersPerPage = 10;
 
   useEffect(() => {
     fetchUsers();
@@ -152,7 +154,7 @@ export default function AdminUsers() {
                   </td>
                 </tr>
               ))
-            ) : users.map((u) => (
+            ) : users.slice((currentPage - 1) * usersPerPage, currentPage * usersPerPage).map((u) => (
               <tr key={u._id} className="hover:bg-surface-container/30 transition-colors group">
                 <td className="px-6 py-5">
                   <div className="flex items-center gap-4">
@@ -210,6 +212,44 @@ export default function AdminUsers() {
             </div>
             <h3 className="text-xl font-bold text-on-surface mb-1">No users found</h3>
             <p className="text-on-surface-variant">Try adjusting your search or filters.</p>
+          </div>
+        )}
+        
+        {/* Pagination */}
+        {!loading && Math.ceil(users.length / usersPerPage) > 1 && (
+          <div className="flex items-center justify-between px-6 py-4 border-t border-outline-variant/10 bg-surface-container-lowest">
+            <p className="text-sm text-on-surface-variant font-medium">
+              Showing <span className="font-bold text-on-surface">{users.length > 0 ? (currentPage - 1) * usersPerPage + 1 : 0}</span> to <span className="font-bold text-on-surface">{Math.min(currentPage * usersPerPage, users.length)}</span> of <span className="font-bold text-on-surface">{users.length}</span> users
+            </p>
+            <div className="flex gap-2">
+              <button 
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-surface-container disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <span className="material-symbols-outlined text-sm">chevron_left</span>
+              </button>
+              {Array.from({ length: Math.ceil(users.length / usersPerPage) }, (_, i) => i + 1).map(num => (
+                <button
+                  key={num}
+                  onClick={() => setCurrentPage(num)}
+                  className={`w-8 h-8 flex items-center justify-center rounded-lg text-sm font-bold transition-colors ${
+                    currentPage === num 
+                      ? 'bg-primary text-on-primary shadow-sm' 
+                      : 'hover:bg-surface-container text-on-surface-variant'
+                  }`}
+                >
+                  {num}
+                </button>
+              ))}
+              <button 
+                onClick={() => setCurrentPage(p => Math.min(Math.ceil(users.length / usersPerPage), p + 1))}
+                disabled={currentPage === Math.ceil(users.length / usersPerPage)}
+                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-surface-container disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <span className="material-symbols-outlined text-sm">chevron_right</span>
+              </button>
+            </div>
           </div>
         )}
       </div>
