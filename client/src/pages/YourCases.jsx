@@ -21,9 +21,9 @@ export default function YourCases() {
     setLoading(true);
     try {
       let params = { page, limit, search, status, crime_type: crimeFilter };
-      
+
       if (activeTab === 'active') {
-        if (!status) params.status = 'under_investigation'; 
+        if (!status) params.status = 'under_investigation';
       } else if (activeTab === 'closed') {
         params.status = 'closed';
       }
@@ -85,11 +85,10 @@ export default function YourCases() {
                 setActiveTab(tab.id);
                 setPage(1);
               }}
-              className={`flex items-center gap-2.5 px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
-                activeTab === tab.id 
-                  ? 'bg-primary text-on-primary shadow-lg shadow-primary/20 scale-[1.02]' 
+              className={`flex items-center gap-2.5 px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === tab.id
+                  ? 'bg-primary text-on-primary shadow-lg shadow-primary/20 scale-[1.02]'
                   : 'text-on-surface-variant hover:bg-surface-container hover:text-on-surface'
-              }`}
+                }`}
             >
               <span className="material-symbols-outlined text-[18px]">{tab.icon}</span>
               {tab.label}
@@ -155,7 +154,7 @@ export default function YourCases() {
           </div>
 
           {(search || status || crimeFilter || activeTab !== 'active') && (
-            <button 
+            <button
               onClick={() => { setSearch(''); setStatus(''); setCrimeFilter(''); setActiveTab('active'); setPage(1); }}
               className="text-[10px] font-black uppercase tracking-[0.2em] text-primary hover:text-primary-dim underline underline-offset-4 ml-auto"
             >
@@ -190,7 +189,7 @@ export default function YourCases() {
                   {cases.map((c) => (
                     <tr key={c._id} className="hover:bg-primary/[0.02] transition-colors group">
                       <td className="px-3 py-5">
-                        <span className="text-xs font-black text-on-surface block truncate max-w-[120px]">#{c.fir_number}</span>
+                        <span className="text-xs font-black text-on-surface block">#{c.fir_number}</span>
                         <p className="text-[9px] text-on-surface-variant font-medium mt-0.5">{new Date(c.createdAt).toLocaleDateString()}</p>
                       </td>
                       <td className="px-3 py-5">
@@ -229,16 +228,16 @@ export default function YourCases() {
                       <td className="px-3 py-5 text-center">
                         <div className="flex justify-center">
                           <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] font-black tracking-widest uppercase ${c.status === 'closed' ? 'bg-red-100 text-red-700' :
-                              c.status === 'verified' ? 'bg-emerald-100 text-emerald-700' :
-                                c.status === 'under_investigation' ? 'bg-blue-100 text-blue-700' :
-                                  c.status === 'pending' ? 'bg-amber-100 text-amber-700' :
-                                    'bg-primary-container text-primary-dim'
+                            c.status === 'verified' ? 'bg-emerald-100 text-emerald-700' :
+                              c.status === 'under_investigation' ? 'bg-blue-100 text-blue-700' :
+                                c.status === 'pending' ? 'bg-amber-100 text-amber-700' :
+                                  'bg-primary-container text-primary-dim'
                             }`}>
                             <span className={`w-1 h-1 rounded-full ${c.status === 'closed' ? 'bg-red-500' :
-                                c.status === 'verified' ? 'bg-emerald-500' :
-                                  c.status === 'under_investigation' ? 'bg-blue-500' :
-                                    c.status === 'pending' ? 'bg-amber-500' :
-                                      'bg-primary'
+                              c.status === 'verified' ? 'bg-emerald-500' :
+                                c.status === 'under_investigation' ? 'bg-blue-500' :
+                                  c.status === 'pending' ? 'bg-amber-500' :
+                                    'bg-primary'
                               }`}></span>
                             {c.status?.replace('_', ' ')}
                           </div>
@@ -262,7 +261,7 @@ export default function YourCases() {
                   Showing <span className="text-on-surface">{(page - 1) * limit + 1}</span> to <span className="text-on-surface">{Math.min(page * limit, total)}</span> of <span className="text-on-surface">{total}</span> cases
                 </p>
                 <div className="flex gap-2">
-                  <button 
+                  <button
                     onClick={() => setPage(p => Math.max(1, p - 1))}
                     disabled={page === 1}
                     className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-surface-container disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
@@ -273,16 +272,15 @@ export default function YourCases() {
                     <button
                       key={num}
                       onClick={() => setPage(num)}
-                      className={`w-8 h-8 flex items-center justify-center rounded-lg text-xs font-bold transition-colors ${
-                        page === num 
-                          ? 'bg-primary text-on-primary shadow-sm' 
+                      className={`w-8 h-8 flex items-center justify-center rounded-lg text-xs font-bold transition-colors ${page === num
+                          ? 'bg-primary text-on-primary shadow-sm'
                           : 'hover:bg-surface-container text-on-surface-variant'
-                      }`}
+                        }`}
                     >
                       {num}
                     </button>
                   ))}
-                  <button 
+                  <button
                     onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                     disabled={page === totalPages}
                     className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-surface-container disabled:opacity-50 disabled:cursor-not-allowed transition-colors"

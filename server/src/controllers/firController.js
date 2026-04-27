@@ -151,6 +151,7 @@ exports.getAllFIRs = asyncHandler(async (req, res) => {
   // Global search
   if (search) {
     filter.$or = [
+      { fir_number: { $regex: search, $options: "i" } },
       { complaint_text: { $regex: search, $options: "i" } },
       { location: { $regex: search, $options: "i" } },
       { crime_type: { $regex: search, $options: "i" } },

@@ -57,6 +57,28 @@ const CustomTooltip = ({ active, payload }) => {
   return null;
 };
 
+const CustomizedAxisTick = (props) => {
+  const { x, y, payload } = props;
+  const words = payload.value.replace(/_/g, ' ').split(' ');
+  return (
+    <g transform={`translate(${x},${y})`}>
+      {words.map((word, index) => (
+        <text 
+          key={index} 
+          x={0} 
+          y={16 + (index * 12)} 
+          textAnchor="middle" 
+          fill="#64748b" 
+          fontSize={10} 
+          fontWeight={700}
+        >
+          {word}
+        </text>
+      ))}
+    </g>
+  );
+};
+
 export default function AdminDashboard() {
   const { user } = useOutletContext();
   const [stats, setStats] = useState({ 
@@ -183,9 +205,9 @@ export default function AdminDashboard() {
           </h3>
           <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={statusData}>
+              <BarChart data={statusData} margin={{ top: 20, right: 30, left: 0, bottom: 40 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 10, fontWeight: 700 }} />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={<CustomizedAxisTick />} interval={0} />
                 <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} />
                 <Tooltip cursor={{ fill: 'transparent' }} content={() => null} wrapperStyle={{ display: 'none' }} />
                 <Bar 

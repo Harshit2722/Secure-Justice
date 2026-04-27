@@ -25,6 +25,8 @@ export default function AdminAssignments() {
   const [showAssignDropdown, setShowAssignDropdown] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState({ show: false, id: null });
   const [deleting, setDeleting] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const firsPerPage = 10;
 
   useEffect(() => {
     fetchInitialData();
@@ -105,7 +107,7 @@ export default function AdminAssignments() {
                   placeholder="Search FIRs by ID, Location, or Description..." 
                   className="w-full pl-12 pr-4 py-3.5 rounded-2xl bg-surface-container-lowest border border-outline-variant/20 focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/5 text-sm font-medium transition-all shadow-sm"
                   value={search}
-                  onChange={(e) => setSearch(e.target.value)}
+                  onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
                 />
               </div>
           </div>
@@ -271,7 +273,7 @@ export default function AdminAssignments() {
                 </tr>
               ))
             ) : firs.length > 0 ? (
-              firs.map((fir) => (
+              firs.slice((currentPage - 1) * firsPerPage, currentPage * firsPerPage).map((fir) => (
                 <tr key={fir._id} className="hover:bg-surface-container/30 transition-colors group">
                   <td className="px-6 py-5">
                     <p className="font-black text-sm text-on-surface">#{fir.fir_number}</p>
@@ -322,6 +324,44 @@ export default function AdminAssignments() {
             )}
           </tbody>
         </table>
+        
+        {/* Pagination */}
+        {!loading && Math.ceil(firs.length / firsPerPage) > 1 && (
+          <div className="flex items-center justify-between px-6 py-4 border-t border-outline-variant/10 bg-surface-container-lowest">
+            <p className="text-sm text-on-surface-variant font-medium">
+              Showing <span className="font-bold text-on-surface">{firs.length > 0 ? (currentPage - 1) * firsPerPage + 1 : 0}</span> to <span className="font-bold text-on-surface">{Math.min(currentPage * firsPerPage, firs.length)}</span> of <span className="font-bold text-on-surface">{firs.length}</span> cases
+            </p>
+            <div className="flex gap-2">
+              <button 
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-surface-container disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <span className="material-symbols-outlined text-sm">chevron_left</span>
+              </button>
+              {Array.from({ length: Math.ceil(firs.length / firsPerPage) }, (_, i) => i + 1).map(num => (
+                <button
+                  key={num}
+                  onClick={() => setCurrentPage(num)}
+                  className={`w-8 h-8 flex items-center justify-center rounded-lg text-sm font-bold transition-colors ${
+                    currentPage === num 
+                      ? 'bg-primary text-on-primary shadow-sm' 
+                      : 'hover:bg-surface-container text-on-surface-variant'
+                  }`}
+                >
+                  {num}
+                </button>
+              ))}
+              <button 
+                onClick={() => setCurrentPage(p => Math.min(Math.ceil(firs.length / firsPerPage), p + 1))}
+                disabled={currentPage === Math.ceil(firs.length / firsPerPage)}
+                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-surface-container disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <span className="material-symbols-outlined text-sm">chevron_right</span>
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
     </div>
