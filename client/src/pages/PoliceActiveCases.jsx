@@ -75,7 +75,7 @@ export default function PoliceActiveCases() {
           <div className="w-full md:w-[450px] relative group order-1">
             <input
               type="text"
-              placeholder="Search by ID, Location, or Name..."
+              placeholder="Search by FIR ID, or Location..."
               className="w-full bg-surface-container-lowest border border-outline-variant/30 rounded-2xl p-4 pl-12 pr-12 focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/5 shadow-sm transition-all font-medium text-sm"
               value={search}
               onChange={handleSearchChange}
@@ -205,12 +205,12 @@ export default function PoliceActiveCases() {
                   {cases.map((c) => (
                     <tr key={c._id} className="hover:bg-primary/[0.02] transition-colors group">
                       <td className="px-3 py-5">
-                        <span className="text-xs font-black text-on-surface block truncate max-w-[110px]">#{c.fir_number}</span>
+                        <span className="text-xs font-black text-on-surface block">#{c.fir_number}</span>
                         <p className="text-[9px] text-on-surface-variant font-medium mt-0.5">{new Date(c.createdAt).toLocaleDateString()}</p>
                       </td>
                       <td className="px-3 py-5">
-                        <p className="text-xs font-bold text-on-surface truncate max-w-[140px]">{c.citizen?.name}</p>
-                        <p className="text-[9px] text-on-surface-variant uppercase tracking-wider truncate max-w-[140px]">{c.citizen?.email}</p>
+                        <p className="text-xs font-bold text-on-surface">{c.citizen?.name}</p>
+                        <p className="text-[9px] text-on-surface-variant uppercase tracking-wider">{c.citizen?.email}</p>
                       </td>
                       <td className="px-3 py-5">
                         <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-black bg-surface-container border border-outline-variant/20 text-on-surface uppercase tracking-wide">
@@ -218,18 +218,18 @@ export default function PoliceActiveCases() {
                         </span>
                       </td>
                       <td className="px-3 py-5">
-                        <div className="flex items-center gap-1.5 text-xs font-medium text-on-surface-variant truncate max-w-[100px]">
+                        <div className="flex items-center gap-1.5 text-xs font-medium text-on-surface-variant">
                           <span className="material-symbols-outlined text-[14px]">location_on</span>
                           {c.location}
                         </div>
                       </td>
                       <td className="px-3 py-5">
                         {c.assigned_officer ? (
-                          <div className="flex items-center gap-2 truncate max-w-[100px]">
+                          <div className="flex items-center gap-2">
                             <div className="w-6 h-6 rounded-lg bg-police-container text-police flex items-center justify-center shrink-0">
                               <span className="material-symbols-outlined text-[14px]">shield_person</span>
                             </div>
-                            <span className="text-[10px] font-bold text-on-surface truncate">{c.assigned_officer.name}</span>
+                            <span className="text-[10px] font-bold text-on-surface">{c.assigned_officer.name}</span>
                           </div>
                         ) : (
                           <span className="px-2 py-0.5 rounded bg-surface-container text-on-surface-variant/50 text-[9px] font-bold uppercase tracking-wider">Unassigned</span>
@@ -237,11 +237,11 @@ export default function PoliceActiveCases() {
                       </td>
                       <td className="px-3 py-5">
                         {c.assigned_forensic ? (
-                          <div className="flex items-center gap-2 truncate max-w-[100px]">
+                          <div className="flex items-center gap-2">
                             <div className="w-6 h-6 rounded-lg bg-forensic-container text-forensic flex items-center justify-center shrink-0">
                               <span className="material-symbols-outlined text-[14px]">science</span>
                             </div>
-                            <span className="text-[10px] font-bold text-on-surface truncate">{c.assigned_forensic.name}</span>
+                            <span className="text-[10px] font-bold text-on-surface">{c.assigned_forensic.name}</span>
                           </div>
                         ) : (
                           <span className="px-2 py-0.5 rounded bg-surface-container text-on-surface-variant/50 text-[9px] font-bold uppercase tracking-wider">Unassigned</span>

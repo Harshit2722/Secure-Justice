@@ -110,18 +110,20 @@ export default function CitizenPortal() {
                     <Link key={c._id} to={`/cases/${c._id}`} className="bg-surface-container p-6 rounded-2xl border border-outline-variant/10 shadow-sm h-[200px] flex flex-col justify-between hover:shadow-md hover:border-primary/30 transition-all cursor-pointer relative animate-in fade-in zoom-in-95 duration-300 group">
                       <div className="flex justify-between items-start">
                         <div>
-                          <p className="text-xs font-extrabold text-on-surface uppercase tracking-widest mt-1">FIR NO: <span className="font-bold text-on-surface-variant ml-2 normal-case tracking-normal">{c.fir_number}</span></p>
+                          <p className="text-xs font-extrabold text-on-surface uppercase tracking-widest mt-1 flex items-center">FIR NO: <span className="font-bold text-on-surface-variant ml-2 normal-case tracking-normal">{c.fir_number}</span></p>
                         </div>
                         <div className={`flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full ${
                           c.status === 'closed' ? 'bg-red-100 text-red-700' :
                           c.status === 'verified' ? 'bg-emerald-100 text-emerald-700' :
                           c.status === 'pending' ? 'bg-amber-100 text-amber-700' :
+                          c.status === 'under_investigation' ? 'bg-blue-100 text-blue-700' :
                           'bg-primary-container text-primary-dim'
                         }`}>
                           <span className={`w-1.5 h-1.5 rounded-full ${
                             c.status === 'closed' ? 'bg-red-500' :
                             c.status === 'verified' ? 'bg-emerald-500' :
                             c.status === 'pending' ? 'bg-amber-500' :
+                            c.status === 'under_investigation' ? 'bg-blue-500' :
                             'bg-primary'
                           }`}></span>
                           <span className="uppercase">{c.status}</span>

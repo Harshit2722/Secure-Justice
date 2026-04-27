@@ -120,15 +120,15 @@ export default function MyCases() {
             <tbody className="divide-y divide-outline-variant/10">
               {currentCases.map((c) => (
                 <tr key={c._id} className="hover:bg-surface-container/50 transition-colors">
-                  <td className="px-4 py-4 font-bold text-on-surface truncate max-w-[120px]">{c.fir_number}</td>
-                  <td className="px-4 py-4 text-sm font-medium text-on-surface-variant truncate max-w-[120px]">{c.crime_type}</td>
+                  <td className="px-4 py-4 font-bold text-on-surface">{c.fir_number}</td>
+                  <td className="px-4 py-4 text-sm font-medium text-on-surface-variant">{c.crime_type}</td>
                   <td className="px-4 py-4">
                     {c.assigned_officer ? (
                       <div className="flex items-center gap-2">
                         <div className="w-6 h-6 rounded-lg bg-police-container text-police flex items-center justify-center shrink-0">
                           <span className="material-symbols-outlined text-[14px]">shield_person</span>
                         </div>
-                        <span className="text-[10px] font-bold text-on-surface truncate max-w-[80px]">{c.assigned_officer.name}</span>
+                        <span className="text-[10px] font-bold text-on-surface">{c.assigned_officer.name}</span>
                       </div>
                     ) : (
                       <span className="text-[9px] text-on-surface-variant/40 font-bold uppercase tracking-widest">Pending</span>
@@ -140,7 +140,7 @@ export default function MyCases() {
                         <div className="w-6 h-6 rounded-lg bg-forensic-container text-forensic flex items-center justify-center shrink-0">
                           <span className="material-symbols-outlined text-[14px]">science</span>
                         </div>
-                        <span className="text-[10px] font-bold text-on-surface truncate max-w-[80px]">{c.assigned_forensic.name}</span>
+                        <span className="text-[10px] font-bold text-on-surface">{c.assigned_forensic.name}</span>
                       </div>
                     ) : (
                       <span className="text-[9px] text-on-surface-variant/40 font-bold uppercase tracking-widest">Pending</span>
@@ -164,7 +164,7 @@ export default function MyCases() {
                       <span>{c.status?.replace('_', ' ')}</span>
                     </div>
                   </td>
-                  <td className="px-4 py-4 text-sm text-on-surface-variant truncate max-w-[120px]">{c.location}</td>
+                  <td className="px-4 py-4 text-sm text-on-surface-variant">{c.location}</td>
                   <td className="px-4 py-4 text-sm font-medium text-right">
                     <button onClick={() => navigate(`/cases/${c._id}`)} className="bg-primary/10 text-primary px-3 py-1 rounded-lg hover:bg-primary hover:text-on-primary transition-colors font-bold text-[10px] uppercase tracking-wide">View</button>
                   </td>
