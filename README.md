@@ -98,5 +98,3 @@ Secure-Justice takes the integrity of legal proceedings seriously:
 - **Proxy Downloads**: Cloudinary storage links are never exposed directly to the client. The backend securely proxies and streams the file to authorized users only.
 - **Workflow Guards**: Restricts unauthorized case status reversions and ensures the proper chain of custody.
 
-
-```
