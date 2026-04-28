@@ -5,12 +5,7 @@ import { register } from '../../utils/api';
 const ROLES = [
   { label: 'Citizen', value: 'citizen' },
   { label: 'Police', value: 'police' },
-  { label: 'Forensic Expert', value: 'forensic' },
-  { label: 'Lawyer', value: 'lawyer' },
-  { label: 'Victim', value: 'victim' },
-  { label: 'Defendant', value: 'defendant' },
-  { label: 'Court', value: 'court' },
-  { label: 'Admin', value: 'admin' }
+  { label: 'Forensic Expert', value: 'forensic' }
 ];
 
 export default function Register() {
