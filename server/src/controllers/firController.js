@@ -169,6 +169,16 @@ exports.getAllFIRs = asyncHandler(async (req, res) => {
     .populate("assigned_officer", "name email")
     .populate("assigned_forensic", "name email");
 
+  const firsWithEvidence = await Promise.all(firs.map(async (fir) => {
+      const evidenceCount = await Evidence.countDocuments({ fir: fir._id });
+      const tamperedCount = await Evidence.countDocuments({ fir: fir._id, status: 'Tampered' });
+      return {
+          ...fir.toObject(),
+          evidence_count: evidenceCount,
+          has_tampered_evidence: tamperedCount > 0
+      };
+  }));
+
   const total = await FIR.countDocuments(filter);
 
   return res.status(200).json({
@@ -176,7 +186,7 @@ exports.getAllFIRs = asyncHandler(async (req, res) => {
     total,
     page,
     pages: Math.ceil(total / limit) || 1,
-    data: firs,
+    data: firsWithEvidence,
   });
 });
 
@@ -209,10 +219,20 @@ exports.getFIRsByUser = asyncHandler(async (req, res) => {
 
   const firs = await FIR.find({ citizen }).populate("citizen", "name email");
 
+  const firsWithEvidence = await Promise.all(firs.map(async (fir) => {
+      const evidenceCount = await Evidence.countDocuments({ fir: fir._id });
+      const tamperedCount = await Evidence.countDocuments({ fir: fir._id, status: 'Tampered' });
+      return {
+          ...fir.toObject(),
+          evidence_count: evidenceCount,
+          has_tampered_evidence: tamperedCount > 0
+      };
+  }));
+
   return res.status(200).json({
     success: true,
-    count: firs.length,
-    data: firs,
+    count: firsWithEvidence.length,
+    data: firsWithEvidence,
   });
 });
 
@@ -506,7 +526,7 @@ exports.assignOfficer = asyncHandler(async (req, res) => {
 // ==============================
 exports.getMyAssignedFIRs = asyncHandler(async (req, res) => {
   const officerId = req.user.id;
-  const { status, search } = req.query;
+  const { status, search, crime_type } = req.query;
 
   if (req.user.role !== "police") {
     throw new ApiError(
@@ -520,6 +540,13 @@ exports.getMyAssignedFIRs = asyncHandler(async (req, res) => {
   if (status) {
     filter.status = {
       $regex: `^${status}$`,
+      $options: "i",
+    };
+  }
+
+  if (crime_type) {
+    filter.crime_type = {
+      $regex: `^${crime_type}$`,
       $options: "i",
     };
   }
@@ -544,6 +571,16 @@ exports.getMyAssignedFIRs = asyncHandler(async (req, res) => {
     .populate("assigned_officer", "name email role")
     .populate("assigned_forensic", "name email role");
 
+  const firsWithEvidence = await Promise.all(firs.map(async (fir) => {
+      const evidenceCount = await Evidence.countDocuments({ fir: fir._id });
+      const tamperedCount = await Evidence.countDocuments({ fir: fir._id, status: 'Tampered' });
+      return {
+          ...fir.toObject(),
+          evidence_count: evidenceCount,
+          has_tampered_evidence: tamperedCount > 0
+      };
+  }));
+
   const total = await FIR.countDocuments(filter);
 
   return res.status(200).json({
@@ -551,7 +588,7 @@ exports.getMyAssignedFIRs = asyncHandler(async (req, res) => {
     total,
     page,
     pages: Math.ceil(total / limit) || 1,
-    data: firs,
+    data: firsWithEvidence,
   });
 });
 
@@ -762,7 +799,7 @@ exports.assignForensic = asyncHandler(async (req, res) => {
 // ==============================
 exports.getMyAssignedForensicFIRs = asyncHandler(async (req, res) => {
   const forensicId = req.user.id;
-  const { status, search } = req.query;
+  const { status, search, crime_type } = req.query;
 
   if (req.user.role !== "forensic") {
     throw new ApiError(
@@ -776,6 +813,13 @@ exports.getMyAssignedForensicFIRs = asyncHandler(async (req, res) => {
   if (status) {
     filter.status = {
       $regex: `^${status}$`,
+      $options: "i",
+    };
+  }
+
+  if (crime_type) {
+    filter.crime_type = {
+      $regex: `^${crime_type}$`,
       $options: "i",
     };
   }
@@ -800,6 +844,16 @@ exports.getMyAssignedForensicFIRs = asyncHandler(async (req, res) => {
     .populate("assigned_officer", "name email")
     .populate("assigned_forensic", "name email");
 
+  const firsWithEvidence = await Promise.all(firs.map(async (fir) => {
+      const evidenceCount = await Evidence.countDocuments({ fir: fir._id });
+      const tamperedCount = await Evidence.countDocuments({ fir: fir._id, status: 'Tampered' });
+      return {
+          ...fir.toObject(),
+          evidence_count: evidenceCount,
+          has_tampered_evidence: tamperedCount > 0
+      };
+  }));
+
   const total = await FIR.countDocuments(filter);
 
   return res.status(200).json({
@@ -807,7 +861,7 @@ exports.getMyAssignedForensicFIRs = asyncHandler(async (req, res) => {
     total,
     page,
     pages: Math.ceil(total / limit) || 1,
-    data: firs,
+    data: firsWithEvidence,
   });
 });
 
