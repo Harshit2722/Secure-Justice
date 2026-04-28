@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, Link, useOutletContext } from 'react-router-dom';
 import { getUserById, deleteUserAccount } from '../utils/api';
 import ConfirmModal from '../components/ConfirmModal';
 
 export default function UserDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useOutletContext();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -81,7 +82,7 @@ export default function UserDetails() {
           <p className="text-on-surface-variant font-medium">Detailed view of platform participant and their history.</p>
         </div>
         <div className="ml-auto">
-          {profile.role !== 'admin' && (
+          {user.role === 'admin' && profile.role !== 'admin' && (
             <button 
               onClick={() => setConfirmDelete(true)}
               className="flex items-center gap-2 bg-error-container text-on-error-container px-6 py-3 rounded-2xl font-black uppercase tracking-widest text-xs hover:scale-105 active:scale-95 transition-all shadow-md"
