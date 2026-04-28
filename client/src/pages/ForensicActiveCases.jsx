@@ -68,7 +68,7 @@ export default function ForensicActiveCases() {
           <div className="w-full md:w-[450px] relative group order-1">
             <input
               type="text"
-              placeholder="Search reports by FIR ID..."
+              placeholder="Search reports by FIR ID or Location..."
               className="w-full bg-surface-container-lowest border border-outline-variant/30 rounded-2xl p-4 pl-12 pr-12 focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/5 shadow-sm transition-all font-medium text-sm"
               value={search}
               onChange={handleSearchChange}

@@ -158,37 +158,9 @@ export default function Documents() {
             )}
           </div>
 
-          {/* Integrity Status */}
-          <div className="relative">
-            <button
-              onClick={() => { setShowStatusMenu(!showStatusMenu); }}
-              className={`flex items-center gap-3 px-5 py-2.5 rounded-xl border text-xs font-black uppercase tracking-widest transition-all ${integrityFilter !== 'all' ? 'bg-error/5 border-error text-error' : 'bg-surface-container-lowest border-outline-variant/20 text-on-surface-variant hover:border-primary/50'}`}
-            >
-              <span className="material-symbols-outlined text-[18px]">{integrityFilter === 'tampered' ? 'gpp_bad' : 'gpp_good'}</span>
-              {integrityFilter === 'all' ? 'Integrity Status' : integrityFilter}
-              <span className={`material-symbols-outlined text-[18px] transition-transform duration-300 ${showStatusMenu ? 'rotate-180' : ''}`}>expand_more</span>
-            </button>
+          {/* Integrity Status Removed */}
 
-            {showStatusMenu && (
-              <>
-                <div className="fixed inset-0 z-40" onClick={() => setShowStatusMenu(false)}></div>
-                <div className="absolute left-0 mt-2 w-56 bg-surface-container-lowest border border-outline-variant/20 rounded-2xl shadow-2xl z-50 py-2 animate-in fade-in zoom-in-95 duration-200">
-                  {['all', 'verified', 'tampered'].map(s => (
-                    <button
-                      key={s}
-                      onClick={() => { setIntegrityFilter(s); setShowStatusMenu(false); if(s === 'tampered') setActiveTab('tampered'); }}
-                      className={`w-full text-left px-4 py-3 text-xs hover:bg-primary/5 transition-colors capitalize font-bold flex items-center justify-between ${integrityFilter === s ? 'text-primary' : 'text-on-surface-variant'}`}
-                    >
-                      {s === 'all' ? 'All Records' : s}
-                      {integrityFilter === s && <span className="material-symbols-outlined text-sm">check</span>}
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
-
-          {(searchTerm || statusFilter || crimeFilter || integrityFilter !== 'all') && (
+          {(searchTerm || statusFilter || crimeFilter || integrityFilter !== 'all' || activeTab !== 'all') && (
             <button 
               onClick={() => { setSearchTerm(''); setStatusFilter(''); setCrimeFilter(''); setIntegrityFilter('all'); setActiveTab('all'); }}
               className="text-[10px] font-black uppercase tracking-[0.2em] text-primary hover:text-primary-dim underline underline-offset-4 ml-auto"

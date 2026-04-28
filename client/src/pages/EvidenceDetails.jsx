@@ -90,7 +90,7 @@ export default function EvidenceDetails() {
   const isPending = fir?.status === 'pending';
   const isClosed = fir?.status === 'closed';
 
-  const canUpload = !isClosed && (user.role === 'admin' || isAssignedOfficer || isCitizenOwner);
+  const canUpload = !isClosed && (isAssignedOfficer || isCitizenOwner);
 
   return (
     <div className="space-y-8 animate-in fade-in">
